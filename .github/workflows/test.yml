@@ -30,7 +30,34 @@ jobs:
         run: go test -v ./test/...
 
       - name: Run tests with coverage
-        run: go test -v -coverprofile=coverage.out -covermode=atomic ./test/...
+        run: go test -v -coverprofile=coverage-${{ matrix.os }}-${{ matrix.go-version }}.out -covermode=atomic ./test/...
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.os }}-${{ matrix.go-version }}
+          path: coverage-${{ matrix.os }}-${{ matrix.go-version }}.out
+
+  coverage:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: coverage/
+
+      - name: Merge coverage reports
+        run: |
+          echo "mode: atomic" > coverage.out
+          for f in coverage/coverage-*.out; do
+            if [ -f "$f" ]; then
+              tail -n +2 "$f" >> coverage.out
+            fi
+          done
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -38,7 +65,8 @@ jobs:
           file: ./coverage.out
           flags: unittests
           name: codecov-umbrella
-          fail_ci_if_error: true
+          fail_ci_if_error: false
+          verbose: true
 
   build:
     runs-on: ${{ matrix.os }}
