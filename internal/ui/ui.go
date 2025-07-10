@@ -122,7 +122,7 @@ func (ui *UI) updateStatusView(v *gocui.View) {
 	cyan := color.New(color.FgCyan).SprintFunc()
 	yellow := color.New(color.FgYellow).SprintFunc()
 
-	fmt.Fprintf(v, "Watching: %s | Events: %s | Sort: %s\n",
+	_, _ = fmt.Fprintf(v, "Watching: %s | Events: %s | Sort: %s\n",
 		cyan(ui.rootPath),
 		yellow(len(ui.state.Events)),
 		cyan(ui.getSortOptionName()))
@@ -149,7 +149,7 @@ func (ui *UI) updateFilterView(v *gocui.View) {
 		aggregateStatus = red("✗")
 	}
 
-	fmt.Fprintf(v, "Dirs: %s | Files: %s | Aggregate: %s | Path Filter: %s",
+	_, _ = fmt.Fprintf(v, "Dirs: %s | Files: %s | Aggregate: %s | Path Filter: %s",
 		dirsStatus, filesStatus, aggregateStatus, ui.state.Filter.PathFilter)
 }
 
@@ -160,7 +160,7 @@ func (ui *UI) updateEventsView(v *gocui.View) {
 	filteredEvents := ui.getFilteredEvents()
 
 	if len(filteredEvents) == 0 {
-		fmt.Fprintf(v, "No events to display")
+		_, _ = fmt.Fprintf(v, "No events to display")
 		return
 	}
 
@@ -187,7 +187,7 @@ func (ui *UI) updateEventsView(v *gocui.View) {
 // updateHelpView updates the help view
 func (ui *UI) updateHelpView(v *gocui.View) {
 	v.Clear()
-	fmt.Fprintf(v, "q: Quit | f: Toggle files | d: Toggle dirs | a: Toggle aggregate | s: Sort | /: Filter | ↑↓: Navigate | Enter: Select")
+	_, _ = fmt.Fprintf(v, "q: Quit | f: Toggle files | d: Toggle dirs | a: Toggle aggregate | s: Sort | /: Filter | ↑↓: Navigate | Enter: Select")
 }
 
 // renderEvent renders a single event with colors
@@ -233,9 +233,9 @@ func (ui *UI) renderEvent(v *gocui.View, event *FileEvent, selected bool) {
 	line := fmt.Sprintf("%s %s %s%s", timestamp, operationStr, path, countStr)
 
 	if selected {
-		fmt.Fprintf(v, "> %s\n", line)
+		_, _ = fmt.Fprintf(v, "> %s\n", line)
 	} else {
-		fmt.Fprintf(v, "  %s\n", line)
+		_, _ = fmt.Fprintf(v, "  %s\n", line)
 	}
 }
 
