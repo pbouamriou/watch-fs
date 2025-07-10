@@ -341,19 +341,21 @@ func (ui *UI) addEvent(path string, operation fsnotify.Op, isDir bool) {
 		ui.state.Events = ui.state.Events[1:]
 	}
 
-	// Update UI
-	ui.gui.Update(func(g *gocui.Gui) error {
-		if v, err := g.View(EventsView); err == nil {
-			ui.updateEventsView(v)
-		}
-		if v, err := g.View(StatusView); err == nil {
-			ui.updateStatusView(v)
-		}
-		if v, err := g.View(FilterView); err == nil {
-			ui.updateFilterView(v)
-		}
-		return nil
-	})
+	// Update UI only if gui is initialized (not in tests)
+	if ui.gui != nil {
+		ui.gui.Update(func(g *gocui.Gui) error {
+			if v, err := g.View(EventsView); err == nil {
+				ui.updateEventsView(v)
+			}
+			if v, err := g.View(StatusView); err == nil {
+				ui.updateStatusView(v)
+			}
+			if v, err := g.View(FilterView); err == nil {
+				ui.updateFilterView(v)
+			}
+			return nil
+		})
+	}
 }
 
 // watchEvents watches for file system events
@@ -474,11 +476,15 @@ func (ui *UI) toggleDirs(g *gocui.Gui, v *gocui.View) error {
 
 // toggleAggregate toggles event aggregation
 func (ui *UI) toggleAggregate(g *gocui.Gui, v *gocui.View) error {
+	wasAggregated := ui.state.AggregateEvents
 	ui.state.AggregateEvents = !ui.state.AggregateEvents
 
 	// If we're disabling aggregation, we need to "de-aggregate" existing events
 	if !ui.state.AggregateEvents {
 		ui.deaggregateEvents()
+	} else if !wasAggregated {
+		// If we're re-enabling aggregation, we need to re-aggregate existing events
+		ui.reaggregateEvents()
 	}
 
 	ui.state.ScrollOffset = 0
@@ -518,6 +524,40 @@ func (ui *UI) deaggregateEvents() {
 	ui.state.Events = newEvents
 }
 
+// reaggregateEvents combines similar events that occurred within 1 second
+func (ui *UI) reaggregateEvents() {
+	if len(ui.state.Events) == 0 {
+		return
+	}
+
+	var newEvents []*FileEvent
+	eventMap := make(map[string]*FileEvent) // key: path+operation
+
+	for _, event := range ui.state.Events {
+		key := event.Path + "|" + event.Operation.String()
+
+		if existingEvent, exists := eventMap[key]; exists {
+			// Check if events are within 1 second of each other
+			if event.Timestamp.Sub(existingEvent.Timestamp) < time.Second {
+				existingEvent.Count++
+				// Update timestamp to the most recent one
+				if event.Timestamp.After(existingEvent.Timestamp) {
+					existingEvent.Timestamp = event.Timestamp
+				}
+			} else {
+				// Too much time has passed, create new event
+				eventMap[key] = event
+				newEvents = append(newEvents, event)
+			}
+		} else {
+			eventMap[key] = event
+			newEvents = append(newEvents, event)
+		}
+	}
+
+	ui.state.Events = newEvents
+}
+
 // cycleSort cycles through sort options
 func (ui *UI) cycleSort(g *gocui.Gui, v *gocui.View) error {
 	ui.state.SortOption = (ui.state.SortOption + 1) % 4
@@ -535,4 +575,47 @@ func (ui *UI) cycleSort(g *gocui.Gui, v *gocui.View) error {
 // getFileInfo gets file info for a path
 func (ui *UI) getFileInfo(path string) (os.FileInfo, error) {
 	return os.Stat(path)
+}
+
+// Public methods for testing
+
+// GetState returns the current UI state
+func (ui *UI) GetState() *UIState {
+	return ui.state
+}
+
+// AddEvent adds an event (public version for testing)
+func (ui *UI) AddEvent(path string, operation fsnotify.Op, isDir bool) {
+	ui.addEvent(path, operation, isDir)
+}
+
+// ToggleAggregate toggles aggregation (public version for testing)
+func (ui *UI) ToggleAggregate() {
+	ui.state.AggregateEvents = !ui.state.AggregateEvents
+
+	if !ui.state.AggregateEvents {
+		ui.deaggregateEvents()
+	} else {
+		ui.reaggregateEvents()
+	}
+}
+
+// ToggleFiles toggles file visibility (public version for testing)
+func (ui *UI) ToggleFiles() {
+	ui.state.Filter.ShowFiles = !ui.state.Filter.ShowFiles
+}
+
+// ToggleDirs toggles directory visibility (public version for testing)
+func (ui *UI) ToggleDirs() {
+	ui.state.Filter.ShowDirs = !ui.state.Filter.ShowDirs
+}
+
+// CycleSort cycles through sort options (public version for testing)
+func (ui *UI) CycleSort() {
+	ui.state.SortOption = (ui.state.SortOption + 1) % 4
+}
+
+// GetFilteredEvents returns filtered events (public version for testing)
+func (ui *UI) GetFilteredEvents() []*FileEvent {
+	return ui.getFilteredEvents()
 }
