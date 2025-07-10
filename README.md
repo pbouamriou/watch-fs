@@ -1,5 +1,12 @@
 # watch-fs
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/pbouamriou/watch-fs)](https://goreportcard.com/report/github.com/pbouamriou/watch-fs)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/pbouamriou/watch-fs)](https://go.dev/)
+[![License](https://img.shields.io/github/license/pbouamriou/watch-fs)](https://github.com/pbouamriou/watch-fs/blob/main/LICENSE)
+[![Release](https://img.shields.io/github/v/release/pbouamriou/watch-fs)](https://github.com/pbouamriou/watch-fs/releases)
+[![Tests](https://github.com/pbouamriou/watch-fs/workflows/Tests/badge.svg)](https://github.com/pbouamriou/watch-fs/actions)
+[![Codecov](https://codecov.io/gh/pbouamriou/watch-fs/branch/main/graph/badge.svg)](https://codecov.io/gh/pbouamriou/watch-fs)
+
 A Go file watcher utility that recursively monitors a directory and its subdirectories to detect file changes with a beautiful terminal user interface (TUI) similar to lazygit.
 
 ## Features
@@ -34,30 +41,46 @@ watch-fs/
 └── [configuration files]
 ```
 
-## Installation
+## Quick Start
+
+### Installation
+
+#### From Release (Recommended)
+
+Download the latest release for your platform from [GitHub Releases](https://github.com/pbouamriou/watch-fs/releases).
+
+#### From Source
 
 ```bash
-go mod download
+git clone https://github.com/pbouamriou/watch-fs.git
+cd watch-fs
+make build
 ```
 
-## Usage
-
-### TUI Mode (Default)
+#### Using Go
 
 ```bash
-go run cmd/watch-fs/main.go -path /path/to/directory
+go install github.com/pbouamriou/watch-fs/cmd/watch-fs@latest
 ```
 
-### Console Mode (Simple Output)
+### Usage
+
+#### TUI Mode (Default)
 
 ```bash
-go run cmd/watch-fs/main.go -path /path/to/directory -tui=false
+watch-fs -path /path/to/directory
 ```
 
-### Example
+#### Console Mode (Simple Output)
 
 ```bash
-go run cmd/watch-fs/main.go -path ./my-project
+watch-fs -path /path/to/directory -tui=false
+```
+
+#### Example
+
+```bash
+watch-fs -path ./my-project
 ```
 
 ## Options
@@ -105,25 +128,48 @@ Similar events occurring within 1 second are automatically grouped with a counte
 **When enabled (default)**: Similar events are grouped together with a counter
 **When disabled**: All individual events are shown separately
 
+## Development
+
+### Prerequisites
+
+- Go 1.21 or later
+- Make (optional, for build scripts)
+
+### Setup
+
+```bash
+git clone https://github.com/pbouamriou/watch-fs.git
+cd watch-fs
+make deps    # Install dependencies
+make build   # Build the application
+make test    # Run tests
+```
+
+### Testing
+
+```bash
+# Run all tests
+go test ./test/...
+
+# Run tests with coverage
+go test -cover ./test/...
+
+# Run linter
+golangci-lint run
+```
+
+### Creating a Release
+
+```bash
+# Create a new release (requires clean working directory)
+./scripts/release.sh 1.0.0
+```
+
 ## Dependencies
 
 - [fsnotify](https://github.com/fsnotify/fsnotify) - File watching library
 - [gocui](https://github.com/jroimartin/gocui) - Terminal user interface library
 - [fatih/color](https://github.com/fatih/color) - Color output library
-
-## Building
-
-```bash
-make build
-```
-
-## Development
-
-```bash
-make deps    # Install dependencies
-make test    # Run tests
-make clean   # Clean build artifacts
-```
 
 ## Contributing
 
@@ -135,4 +181,4 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture infor
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) file for details.

@@ -17,6 +17,14 @@
 # Go workspace file
 go.work
 
+# Build directories
+bin/
+dist/
+
+# Coverage reports
+coverage.out
+coverage.html
+
 # IDE files
 .vscode/
 .idea/
@@ -33,10 +41,6 @@ go.work
 ehthumbs.db
 Thumbs.db
 
-# Build output
-bin/
-dist/
-build/
-
-# Logs
-*.log 
+# Temporary files
+*.tmp
+*.temp 

@@ -12,12 +12,22 @@ import (
 	"github.com/pbouamriou/watch-fs/pkg/utils"
 )
 
+// Version will be set by the linker during build
+var version = "dev"
+
 func main() {
 	var rootPath string
 	var useTUI bool
+	var showVersion bool
 	flag.StringVar(&rootPath, "path", "", "Directory to watch (required)")
 	flag.BoolVar(&useTUI, "tui", true, "Use terminal user interface (default: true)")
+	flag.BoolVar(&showVersion, "version", false, "Show version information")
 	flag.Parse()
+
+	if showVersion {
+		fmt.Printf("watch-fs version %s\n", version)
+		os.Exit(0)
+	}
 
 	if rootPath == "" {
 		fmt.Println("Error: -path flag is required")
