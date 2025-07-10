@@ -30,13 +30,16 @@ jobs:
         run: go test -v ./test/...
 
       - name: Run tests with coverage
-        run: go test -v -coverprofile=coverage-${{ matrix.os }}-${{ matrix.go-version }}.out -covermode=atomic ./test/...
+        run: |
+          version="${{ matrix.go-version }}"
+          version_fixed="${version//./_}"
+          go test -v -coverprofile=coverage-${{ matrix.os }}-go${version_fixed}.out -covermode=atomic ./test/...
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.os }}-${{ matrix.go-version }}
-          path: coverage-${{ matrix.os }}-${{ matrix.go-version }}.out
+          name: coverage-${{ matrix.os }}-go${{ matrix.go-version }}
+          path: coverage-${{ matrix.os }}-go*.out
 
   coverage:
     needs: test
