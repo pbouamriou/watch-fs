@@ -47,7 +47,7 @@ lint: ## Run linter
 
 lint-install: ## Install golangci-lint
 	@echo "Installing golangci-lint..."
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.55.2
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.1
 	@echo "golangci-lint installed"
 
 install: build ## Install the application

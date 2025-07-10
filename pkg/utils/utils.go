@@ -30,7 +30,7 @@ func GetRelativePath(root, path string) (string, error) {
 // IsHidden checks if a file or directory is hidden
 func IsHidden(path string) bool {
 	base := filepath.Base(path)
-	return len(base) > 0 && base[0] == '.'
+	return base != "" && base[0] == '.'
 }
 
 // ShouldIgnore checks if a path should be ignored

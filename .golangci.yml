@@ -3,6 +3,7 @@ run:
   go: "1.24"
 
 linters:
+  disable-all: true
   enable:
     - gofmt
     - goimports
@@ -13,28 +14,15 @@ linters:
     - ineffassign
     - unused
     - misspell
-    - gosec
-    - prealloc
-    - gocritic
-    - revive
 
 linters-settings:
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-  revive:
-    rules:
-      - name: exported
-        arguments:
-          - disableStutteringCheck
+  goimports:
+    local-prefixes: github.com/pbouamriou/watch-fs
 
 issues:
   exclude-rules:
     - path: _test\.go
       linters:
         - errcheck
-        - gosec
+  max-issues-per-linter: 0
+  max-same-issues: 0

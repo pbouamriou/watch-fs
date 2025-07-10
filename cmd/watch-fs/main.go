@@ -45,12 +45,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer fileWatcher.Close()
 
 	// Add recursive watching
 	if err := fileWatcher.AddRecursive(rootPath); err != nil {
 		log.Fatal(err)
 	}
+	defer fileWatcher.Close()
 
 	if useTUI {
 		// Use TUI mode
