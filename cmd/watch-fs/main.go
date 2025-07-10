@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/fsnotify/fsnotify"
-	ui "github.com/pbouamriou/watch-fs/internal/ui"
+	"github.com/pbouamriou/watch-fs/internal/ui"
 	"github.com/pbouamriou/watch-fs/internal/watcher"
 	"github.com/pbouamriou/watch-fs/pkg/utils"
 )
