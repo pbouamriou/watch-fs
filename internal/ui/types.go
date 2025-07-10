@@ -35,12 +35,13 @@ const (
 
 // UIState represents the current state of the UI
 type UIState struct {
-	Events       []*FileEvent
-	Filter       Filter
-	SortOption   SortOption
-	SelectedPath string
-	ScrollOffset int
-	MaxEvents    int
+	Events          []*FileEvent
+	Filter          Filter
+	SortOption      SortOption
+	SelectedPath    string
+	ScrollOffset    int
+	MaxEvents       int
+	AggregateEvents bool // Toggle for event aggregation
 }
 
 // ViewNames for the TUI

@@ -77,6 +77,7 @@ go run cmd/watch-fs/main.go -path ./my-project
 
 - **f** : Toggle file visibility
 - **d** : Toggle directory visibility
+- **a** : Toggle event aggregation
 
 ### Sorting
 
@@ -99,7 +100,10 @@ go run cmd/watch-fs/main.go -path ./my-project
 
 ## Event Aggregation
 
-Similar events occurring within 1 second are automatically grouped with a counter, reducing noise and making it easier to track rapid changes.
+Similar events occurring within 1 second are automatically grouped with a counter, reducing noise and making it easier to track rapid changes. You can toggle this feature on/off using the **a** key.
+
+**When enabled (default)**: Similar events are grouped together with a counter
+**When disabled**: All individual events are shown separately
 
 ## Dependencies
 

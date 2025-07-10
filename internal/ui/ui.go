@@ -32,10 +32,11 @@ func NewUI(watcher interface {
 }, rootPath string) *UI {
 	return &UI{
 		state: &UIState{
-			Events:     make([]*FileEvent, 0),
-			Filter:     Filter{ShowDirs: true, ShowFiles: true},
-			SortOption: SortByTime,
-			MaxEvents:  1000,
+			Events:          make([]*FileEvent, 0),
+			Filter:          Filter{ShowDirs: true, ShowFiles: true},
+			SortOption:      SortByTime,
+			MaxEvents:       1000,
+			AggregateEvents: true, // Enable aggregation by default
 		},
 		watcher:  watcher,
 		rootPath: rootPath,
@@ -143,8 +144,13 @@ func (ui *UI) updateFilterView(v *gocui.View) {
 		filesStatus = red("✗")
 	}
 
-	fmt.Fprintf(v, "Dirs: %s | Files: %s | Path Filter: %s",
-		dirsStatus, filesStatus, ui.state.Filter.PathFilter)
+	aggregateStatus := green("✓")
+	if !ui.state.AggregateEvents {
+		aggregateStatus = red("✗")
+	}
+
+	fmt.Fprintf(v, "Dirs: %s | Files: %s | Aggregate: %s | Path Filter: %s",
+		dirsStatus, filesStatus, aggregateStatus, ui.state.Filter.PathFilter)
 }
 
 // updateEventsView updates the events view
@@ -181,7 +187,7 @@ func (ui *UI) updateEventsView(v *gocui.View) {
 // updateHelpView updates the help view
 func (ui *UI) updateHelpView(v *gocui.View) {
 	v.Clear()
-	fmt.Fprintf(v, "q: Quit | f: Toggle files | d: Toggle dirs | s: Sort | /: Filter | ↑↓: Navigate | Enter: Select")
+	fmt.Fprintf(v, "q: Quit | f: Toggle files | d: Toggle dirs | a: Toggle aggregate | s: Sort | /: Filter | ↑↓: Navigate | Enter: Select")
 }
 
 // renderEvent renders a single event with colors
@@ -306,14 +312,16 @@ func (ui *UI) getSortOptionName() string {
 
 // addEvent adds a new event to the state
 func (ui *UI) addEvent(path string, operation fsnotify.Op, isDir bool) {
-	// Check if we already have an event for this path in the last second
-	now := time.Now()
-	for _, event := range ui.state.Events {
-		if event.Path == path && event.Operation == operation &&
-			now.Sub(event.Timestamp) < time.Second {
-			event.Count++
-			event.Timestamp = now
-			return
+	if ui.state.AggregateEvents {
+		// Check if we already have an event for this path in the last second
+		now := time.Now()
+		for _, event := range ui.state.Events {
+			if event.Path == path && event.Operation == operation &&
+				now.Sub(event.Timestamp) < time.Second {
+				event.Count++
+				event.Timestamp = now
+				return
+			}
 		}
 	}
 
@@ -321,7 +329,7 @@ func (ui *UI) addEvent(path string, operation fsnotify.Op, isDir bool) {
 	event := &FileEvent{
 		Path:      path,
 		Operation: operation,
-		Timestamp: now,
+		Timestamp: time.Now(),
 		IsDir:     isDir,
 		Count:     1,
 	}
@@ -340,6 +348,9 @@ func (ui *UI) addEvent(path string, operation fsnotify.Op, isDir bool) {
 		}
 		if v, err := g.View(StatusView); err == nil {
 			ui.updateStatusView(v)
+		}
+		if v, err := g.View(FilterView); err == nil {
+			ui.updateFilterView(v)
 		}
 		return nil
 	})
@@ -397,6 +408,9 @@ func (ui *UI) keybindings(g *gocui.Gui) error {
 	if err := g.SetKeybinding("", 'd', gocui.ModNone, ui.toggleDirs); err != nil {
 		return err
 	}
+	if err := g.SetKeybinding("", 'a', gocui.ModNone, ui.toggleAggregate); err != nil {
+		return err
+	}
 
 	// Sorting
 	if err := g.SetKeybinding("", 's', gocui.ModNone, ui.cycleSort); err != nil {
@@ -447,6 +461,20 @@ func (ui *UI) toggleFiles(g *gocui.Gui, v *gocui.View) error {
 // toggleDirs toggles directory visibility
 func (ui *UI) toggleDirs(g *gocui.Gui, v *gocui.View) error {
 	ui.state.Filter.ShowDirs = !ui.state.Filter.ShowDirs
+	ui.state.ScrollOffset = 0
+
+	if v, err := g.View(FilterView); err == nil {
+		ui.updateFilterView(v)
+	}
+	if v, err := g.View(EventsView); err == nil {
+		ui.updateEventsView(v)
+	}
+	return nil
+}
+
+// toggleAggregate toggles event aggregation
+func (ui *UI) toggleAggregate(g *gocui.Gui, v *gocui.View) error {
+	ui.state.AggregateEvents = !ui.state.AggregateEvents
 	ui.state.ScrollOffset = 0
 
 	if v, err := g.View(FilterView); err == nil {

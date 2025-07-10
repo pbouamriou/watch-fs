@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 // ValidateDirectory checks if a path is a valid directory
@@ -51,11 +52,5 @@ func ShouldIgnore(path string) bool {
 		"Thumbs.db",
 	}
 
-	for _, dir := range ignoreDirs {
-		if base == dir {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(ignoreDirs, base)
 }
