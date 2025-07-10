@@ -29,17 +29,19 @@ jobs:
       - name: Run tests
         run: go test -v ./test/...
 
+      - name: Set fixed Go version
+        id: goversion
+        run: echo "fixed=${{ matrix.go-version }}" | sed 's/\./_/g' >> $GITHUB_OUTPUT
+        shell: bash
+
       - name: Run tests with coverage
-        run: |
-          version="${{ matrix.go-version }}"
-          version_fixed="${version//./_}"
-          go test -v -coverprofile=coverage-${{ matrix.os }}-go${version_fixed}.out -covermode=atomic ./test/...
+        run: go test -v -coverprofile=coverage-${{ matrix.os }}-go${{ steps.goversion.outputs.fixed }}.out -covermode=atomic ./test/...
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.os }}-go${{ matrix.go-version }}
-          path: coverage-${{ matrix.os }}-go*.out
+          name: coverage-${{ matrix.os }}-go${{ steps.goversion.outputs.fixed }}
+          path: coverage-${{ matrix.os }}-go${{ steps.goversion.outputs.fixed }}.out
 
   coverage:
     needs: test
