@@ -475,6 +475,12 @@ func (ui *UI) toggleDirs(g *gocui.Gui, v *gocui.View) error {
 // toggleAggregate toggles event aggregation
 func (ui *UI) toggleAggregate(g *gocui.Gui, v *gocui.View) error {
 	ui.state.AggregateEvents = !ui.state.AggregateEvents
+
+	// If we're disabling aggregation, we need to "de-aggregate" existing events
+	if !ui.state.AggregateEvents {
+		ui.deaggregateEvents()
+	}
+
 	ui.state.ScrollOffset = 0
 
 	if v, err := g.View(FilterView); err == nil {
@@ -484,6 +490,32 @@ func (ui *UI) toggleAggregate(g *gocui.Gui, v *gocui.View) error {
 		ui.updateEventsView(v)
 	}
 	return nil
+}
+
+// deaggregateEvents splits aggregated events into individual events
+func (ui *UI) deaggregateEvents() {
+	var newEvents []*FileEvent
+
+	for _, event := range ui.state.Events {
+		if event.Count > 1 {
+			// Create individual events for each count
+			for i := 0; i < event.Count; i++ {
+				newEvent := &FileEvent{
+					Path:      event.Path,
+					Operation: event.Operation,
+					Timestamp: event.Timestamp,
+					IsDir:     event.IsDir,
+					Count:     1,
+				}
+				newEvents = append(newEvents, newEvent)
+			}
+		} else {
+			// Keep single events as they are
+			newEvents = append(newEvents, event)
+		}
+	}
+
+	ui.state.Events = newEvents
 }
 
 // cycleSort cycles through sort options
