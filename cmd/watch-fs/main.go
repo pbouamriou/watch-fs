@@ -5,26 +5,12 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
+	ui "github.com/pbouamriou/watch-fs/internal/ui"
+	"github.com/pbouamriou/watch-fs/internal/watcher"
+	"github.com/pbouamriou/watch-fs/pkg/utils"
 )
-
-func watchRecursive(watcher *fsnotify.Watcher, root string) error {
-	return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			err = watcher.Add(path)
-			if err != nil {
-				return err
-			}
-			fmt.Println("Watching:", path)
-		}
-		return nil
-	})
-}
 
 func main() {
 	var rootPath string
@@ -39,24 +25,26 @@ func main() {
 		os.Exit(1)
 	}
 
-	info, err := os.Stat(rootPath)
-	if os.IsNotExist(err) || !info.IsDir() {
+	// Validate directory
+	if err := utils.ValidateDirectory(rootPath); err != nil {
 		log.Fatalf("Invalid directory: %s\n", rootPath)
 	}
 
-	watcher, err := fsnotify.NewWatcher()
+	// Create watcher
+	fileWatcher, err := watcher.New(rootPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer watcher.Close()
+	defer fileWatcher.Close()
 
-	if err := watchRecursive(watcher, rootPath); err != nil {
+	// Add recursive watching
+	if err := fileWatcher.AddRecursive(rootPath); err != nil {
 		log.Fatal(err)
 	}
 
 	if useTUI {
 		// Use TUI mode
-		ui := NewUI(watcher, rootPath)
+		ui := ui.NewUI(fileWatcher, rootPath)
 		if err := ui.Run(); err != nil {
 			log.Fatal(err)
 		}
@@ -67,7 +55,7 @@ func main() {
 		go func() {
 			for {
 				select {
-				case event, ok := <-watcher.Events:
+				case event, ok := <-fileWatcher.Events():
 					if !ok {
 						return
 					}
@@ -76,11 +64,11 @@ func main() {
 					if event.Op&fsnotify.Create == fsnotify.Create {
 						info, err := os.Stat(event.Name)
 						if err == nil && info.IsDir() {
-							_ = watchRecursive(watcher, event.Name)
+							_ = fileWatcher.AddDirectory(event.Name)
 						}
 					}
 
-				case err, ok := <-watcher.Errors:
+				case err, ok := <-fileWatcher.Errors():
 					if !ok {
 						return
 					}

@@ -22,6 +22,18 @@ The interface includes:
 - **Events View**: Main area showing file events with colors and timestamps
 - **Help Bar**: Keyboard shortcuts and navigation help
 
+## Project Structure
+
+```
+watch-fs/
+├── cmd/watch-fs/         # Main application entry point
+├── internal/ui/          # Terminal User Interface
+├── internal/watcher/     # File system watcher
+├── pkg/utils/           # Utility functions
+├── docs/                # Documentation
+└── [configuration files]
+```
+
 ## Installation
 
 ```bash
@@ -33,19 +45,19 @@ go mod download
 ### TUI Mode (Default)
 
 ```bash
-go run main.go -path /path/to/directory
+go run cmd/watch-fs/main.go -path /path/to/directory
 ```
 
 ### Console Mode (Simple Output)
 
 ```bash
-go run main.go -path /path/to/directory -tui=false
+go run cmd/watch-fs/main.go -path /path/to/directory -tui=false
 ```
 
 ### Example
 
 ```bash
-go run main.go -path ./my-project
+go run cmd/watch-fs/main.go -path ./my-project
 ```
 
 ## Options
@@ -108,6 +120,14 @@ make deps    # Install dependencies
 make test    # Run tests
 make clean   # Clean build artifacts
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
+
+## Architecture
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture information.
 
 ## License
 

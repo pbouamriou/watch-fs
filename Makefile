@@ -3,12 +3,13 @@
 # Variables
 BINARY_NAME=watch-fs
 BUILD_DIR=bin
+CMD_DIR=cmd/watch-fs
 
 # Build the application
 build:
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BUILD_DIR)
-	go build -o $(BUILD_DIR)/$(BINARY_NAME) main.go
+	go build -o $(BUILD_DIR)/$(BINARY_NAME) ./$(CMD_DIR)
 
 # Clean build artifacts
 clean:
@@ -23,7 +24,7 @@ test:
 # Run the application (example)
 run:
 	@echo "Running $(BINARY_NAME)..."
-	go run main.go -path .
+	go run ./$(CMD_DIR) -path .
 
 # Install dependencies
 deps:

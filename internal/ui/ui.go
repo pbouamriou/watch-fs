@@ -1,4 +1,4 @@
-package main
+package ui
 
 import (
 	"fmt"
@@ -14,14 +14,22 @@ import (
 
 // UI represents the terminal user interface
 type UI struct {
-	gui      *gocui.Gui
-	state    *UIState
-	watcher  *fsnotify.Watcher
+	gui     *gocui.Gui
+	state   *UIState
+	watcher interface {
+		Events() <-chan fsnotify.Event
+		Errors() <-chan error
+		AddDirectory(path string) error
+	}
 	rootPath string
 }
 
 // NewUI creates a new UI instance
-func NewUI(watcher *fsnotify.Watcher, rootPath string) *UI {
+func NewUI(watcher interface {
+	Events() <-chan fsnotify.Event
+	Errors() <-chan error
+	AddDirectory(path string) error
+}, rootPath string) *UI {
 	return &UI{
 		state: &UIState{
 			Events:     make([]*FileEvent, 0),
@@ -341,7 +349,7 @@ func (ui *UI) addEvent(path string, operation fsnotify.Op, isDir bool) {
 func (ui *UI) watchEvents() {
 	for {
 		select {
-		case event, ok := <-ui.watcher.Events:
+		case event, ok := <-ui.watcher.Events():
 			if !ok {
 				return
 			}
@@ -354,7 +362,7 @@ func (ui *UI) watchEvents() {
 
 			ui.addEvent(event.Name, event.Op, isDir)
 
-		case err, ok := <-ui.watcher.Errors:
+		case err, ok := <-ui.watcher.Errors():
 			if !ok {
 				return
 			}
