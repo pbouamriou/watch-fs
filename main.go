@@ -28,7 +28,9 @@ func watchRecursive(watcher *fsnotify.Watcher, root string) error {
 
 func main() {
 	var rootPath string
+	var useTUI bool
 	flag.StringVar(&rootPath, "path", "", "Directory to watch (required)")
+	flag.BoolVar(&useTUI, "tui", true, "Use terminal user interface (default: true)")
 	flag.Parse()
 
 	if rootPath == "" {
@@ -52,32 +54,41 @@ func main() {
 		log.Fatal(err)
 	}
 
-	done := make(chan bool)
-
-	go func() {
-		for {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				fmt.Println("Event:", event)
-
-				if event.Op&fsnotify.Create == fsnotify.Create {
-					info, err := os.Stat(event.Name)
-					if err == nil && info.IsDir() {
-						_ = watchRecursive(watcher, event.Name)
-					}
-				}
-
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				log.Println("Watcher error:", err)
-			}
+	if useTUI {
+		// Use TUI mode
+		ui := NewUI(watcher, rootPath)
+		if err := ui.Run(); err != nil {
+			log.Fatal(err)
 		}
-	}()
+	} else {
+		// Use simple console mode (original behavior)
+		done := make(chan bool)
 
-	<-done
+		go func() {
+			for {
+				select {
+				case event, ok := <-watcher.Events:
+					if !ok {
+						return
+					}
+					fmt.Println("Event:", event)
+
+					if event.Op&fsnotify.Create == fsnotify.Create {
+						info, err := os.Stat(event.Name)
+						if err == nil && info.IsDir() {
+							_ = watchRecursive(watcher, event.Name)
+						}
+					}
+
+				case err, ok := <-watcher.Errors:
+					if !ok {
+						return
+					}
+					log.Println("Watcher error:", err)
+				}
+			}
+		}()
+
+		<-done
+	}
 }
