@@ -1,4 +1,4 @@
-version: 2
+version: "2"
 
 run:
   timeout: 5m
@@ -7,10 +7,6 @@ formatters:
   enable:
     - gofmt
     - goimports
-
-formatters-settings:
-  goimports:
-    local-prefix: github.com/pbouamriou/watch-fs
 
 issues:
   max-issues-per-linter: 0
