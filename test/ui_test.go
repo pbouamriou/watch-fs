@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -166,5 +167,86 @@ func TestEventSorting(t *testing.T) {
 	events = ui.GetFilteredEvents()
 	if events[0].Path != "/test/a.txt" {
 		t.Error("First event should be a.txt when sorted by path")
+	}
+}
+
+// TestNavigationKeys tests the navigation functionality
+func TestNavigationKeys(t *testing.T) {
+	mockWatcher := NewMockWatcher()
+	defer mockWatcher.Close()
+
+	ui := ui.NewUI(mockWatcher, "/test/path")
+
+	// Add multiple events
+	for i := 0; i < 15; i++ {
+		ui.AddEvent(fmt.Sprintf("/test/file%d.txt", i), fsnotify.Write, false)
+	}
+
+	// Test initial state
+	if ui.GetState().ScrollOffset != 0 {
+		t.Error("Initial scroll offset should be 0")
+	}
+
+	// Test MoveDown
+	ui.MoveDown()
+	if ui.GetState().ScrollOffset != 1 {
+		t.Errorf("Expected scroll offset 1 after MoveDown, got %d", ui.GetState().ScrollOffset)
+	}
+
+	// Test MoveUp
+	ui.MoveUp()
+	if ui.GetState().ScrollOffset != 0 {
+		t.Errorf("Expected scroll offset 0 after MoveUp, got %d", ui.GetState().ScrollOffset)
+	}
+
+	// Test MoveLeft (should behave like MoveUp)
+	ui.MoveDown()
+	ui.MoveLeft()
+	if ui.GetState().ScrollOffset != 0 {
+		t.Errorf("Expected scroll offset 0 after MoveLeft, got %d", ui.GetState().ScrollOffset)
+	}
+
+	// Test MoveRight (should behave like MoveDown)
+	ui.MoveRight()
+	if ui.GetState().ScrollOffset != 1 {
+		t.Errorf("Expected scroll offset 1 after MoveRight, got %d", ui.GetState().ScrollOffset)
+	}
+
+	// Test PageDown
+	ui.PageDown()
+	if ui.GetState().ScrollOffset != 11 {
+		t.Errorf("Expected scroll offset 11 after PageDown, got %d", ui.GetState().ScrollOffset)
+	}
+
+	// Test PageUp
+	ui.PageUp()
+	if ui.GetState().ScrollOffset != 1 {
+		t.Errorf("Expected scroll offset 1 after PageUp, got %d", ui.GetState().ScrollOffset)
+	}
+
+	// Test MoveToBottom
+	ui.MoveToBottom()
+	expectedBottom := 14 // 15 events - 1 (0-indexed)
+	if ui.GetState().ScrollOffset != expectedBottom {
+		t.Errorf("Expected scroll offset %d after MoveToBottom, got %d", expectedBottom, ui.GetState().ScrollOffset)
+	}
+
+	// Test MoveToTop
+	ui.MoveToTop()
+	if ui.GetState().ScrollOffset != 0 {
+		t.Errorf("Expected scroll offset 0 after MoveToTop, got %d", ui.GetState().ScrollOffset)
+	}
+
+	// Test boundary conditions
+	ui.MoveUp() // Should not go below 0
+	if ui.GetState().ScrollOffset != 0 {
+		t.Errorf("Expected scroll offset 0 after MoveUp at top, got %d", ui.GetState().ScrollOffset)
+	}
+
+	ui.MoveToBottom()
+	ui.MoveDown() // Should not go above max
+	expectedBottom = 14
+	if ui.GetState().ScrollOffset != expectedBottom {
+		t.Errorf("Expected scroll offset %d after MoveDown at bottom, got %d", expectedBottom, ui.GetState().ScrollOffset)
 	}
 }

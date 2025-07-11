@@ -47,7 +47,7 @@ func NewUI(watcher interface {
 func (ui *UI) Run() error {
 	gui, err := gocui.NewGui(gocui.OutputNormal)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create GUI: %w", err)
 	}
 	defer gui.Close()
 
@@ -56,14 +56,18 @@ func (ui *UI) Run() error {
 
 	// Set up keybindings
 	if err := ui.keybindings(gui); err != nil {
-		return err
+		return fmt.Errorf("failed to set keybindings: %w", err)
 	}
 
 	// Start event watcher goroutine
 	go ui.watchEvents()
 
 	// Start the main loop
-	return gui.MainLoop()
+	if err := gui.MainLoop(); err != nil && err != gocui.ErrQuit {
+		return fmt.Errorf("main loop error: %w", err)
+	}
+
+	return nil
 }
 
 // layout defines the layout of the TUI
@@ -113,6 +117,11 @@ func (ui *UI) layout(g *gocui.Gui) error {
 		ui.updateHelpView(v)
 	}
 
+	// Set EventsView as the default active view
+	if _, err := g.SetCurrentView(EventsView); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -158,36 +167,32 @@ func (ui *UI) updateEventsView(v *gocui.View) {
 	v.Clear()
 
 	filteredEvents := ui.getFilteredEvents()
+	lines := len(filteredEvents)
 
-	if len(filteredEvents) == 0 {
+	if lines == 0 {
 		_, _ = fmt.Fprintf(v, "No events to display")
+		// Remettre le curseur en haut si la liste est vide
+		_ = v.SetCursor(0, 0)
 		return
 	}
 
-	// Apply scroll offset
-	start := ui.state.ScrollOffset
-	if start >= len(filteredEvents) {
-		start = len(filteredEvents) - 1
-	}
-	if start < 0 {
-		start = 0
+	for _, event := range filteredEvents {
+		ui.renderEvent(v, event, false)
 	}
 
-	end := start + 20 // Show 20 events at a time
-	if end > len(filteredEvents) {
-		end = len(filteredEvents)
-	}
-
-	for i := start; i < end; i++ {
-		event := filteredEvents[i]
-		ui.renderEvent(v, event, i == start) // Highlight first visible event
+	// Toujours borner le curseur dans la zone valide
+	_, cy := v.Cursor()
+	if cy < 0 {
+		_ = v.SetCursor(0, 0)
+	} else if cy >= lines {
+		_ = v.SetCursor(0, lines-1)
 	}
 }
 
 // updateHelpView updates the help view
 func (ui *UI) updateHelpView(v *gocui.View) {
 	v.Clear()
-	_, _ = fmt.Fprintf(v, "q: Quit | f: Toggle files | d: Toggle dirs | a: Toggle aggregate | s: Sort | /: Filter | ↑↓: Navigate | Enter: Select")
+	_, _ = fmt.Fprintf(v, "q: Quit | f: Toggle files | d: Toggle dirs | a: Toggle aggregate | s: Sort | ↑↓←→/hjkl: Navigate | PgUp/PgDn/u/d: Page | Home/End/g/G: Top/Bottom")
 }
 
 // renderEvent renders a single event with colors
@@ -203,18 +208,18 @@ func (ui *UI) renderEvent(v *gocui.View, event *FileEvent, selected bool) {
 
 	// Format operation with color
 	var operationStr string
-	switch event.Operation {
-	case fsnotify.Create:
+	// Handle combined operations by checking each bit
+	if event.Operation.Has(fsnotify.Create) {
 		operationStr = green("CREATE")
-	case fsnotify.Write:
+	} else if event.Operation.Has(fsnotify.Write) {
 		operationStr = yellow("WRITE")
-	case fsnotify.Remove:
+	} else if event.Operation.Has(fsnotify.Remove) {
 		operationStr = red("REMOVE")
-	case fsnotify.Rename:
+	} else if event.Operation.Has(fsnotify.Rename) {
 		operationStr = magenta("RENAME")
-	case fsnotify.Chmod:
+	} else if event.Operation.Has(fsnotify.Chmod) {
 		operationStr = blue("CHMOD")
-	default:
+	} else {
 		operationStr = "UNKNOWN"
 	}
 
@@ -385,6 +390,13 @@ func (ui *UI) watchEvents() {
 	}
 }
 
+// debugKeyPress is a debug function to test if key events are being received
+func (ui *UI) debugKeyPress(g *gocui.Gui, v *gocui.View) error {
+	// This function will be called for any key press to help debug
+	// We'll just return nil to continue normal processing
+	return nil
+}
+
 // keybindings sets up the key bindings
 func (ui *UI) keybindings(g *gocui.Gui) error {
 	// Quit
@@ -395,11 +407,92 @@ func (ui *UI) keybindings(g *gocui.Gui) error {
 		return err
 	}
 
-	// Navigation
-	if err := g.SetKeybinding(EventsView, gocui.KeyArrowUp, gocui.ModNone, ui.moveUp); err != nil {
+	if err := g.SetKeybinding("", gocui.KeyArrowUp, gocui.ModNone, ui.moveUp); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding(EventsView, gocui.KeyArrowDown, gocui.ModNone, ui.moveDown); err != nil {
+	if err := g.SetKeybinding("", gocui.KeyArrowDown, gocui.ModNone, ui.moveDown); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", gocui.KeyArrowLeft, gocui.ModNone, ui.moveLeft); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", gocui.KeyArrowRight, gocui.ModNone, ui.moveRight); err != nil {
+		return err
+	}
+
+	// Navigation - Global alternative keys (fallback)
+	if err := g.SetKeybinding("", 'k', gocui.ModNone, ui.moveUp); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", 'j', gocui.ModNone, ui.moveDown); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", 'h', gocui.ModNone, ui.moveLeft); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", 'l', gocui.ModNone, ui.moveRight); err != nil {
+		return err
+	}
+
+	// Navigation - Page Up/Down (standard)
+	if err := g.SetKeybinding(EventsView, gocui.KeyPgup, gocui.ModNone, ui.pageUp); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(EventsView, gocui.KeyPgdn, gocui.ModNone, ui.pageDown); err != nil {
+		return err
+	}
+
+	// Navigation - Page Up/Down alternatives for Mac
+	// u/d for page up/down (simple keys)
+	if err := g.SetKeybinding(EventsView, 'u', gocui.ModNone, ui.pageUp); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(EventsView, 'd', gocui.ModNone, ui.pageDown); err != nil {
+		return err
+	}
+
+	// Navigation - Global page keys (fallback)
+	if err := g.SetKeybinding("", gocui.KeyPgup, gocui.ModNone, ui.pageUp); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", gocui.KeyPgdn, gocui.ModNone, ui.pageDown); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", 'u', gocui.ModNone, ui.pageUp); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", 'd', gocui.ModNone, ui.pageDown); err != nil {
+		return err
+	}
+
+	// Navigation - Home/End (standard)
+	if err := g.SetKeybinding(EventsView, gocui.KeyHome, gocui.ModNone, ui.moveToTop); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(EventsView, gocui.KeyEnd, gocui.ModNone, ui.moveToBottom); err != nil {
+		return err
+	}
+
+	// Navigation - Home/End alternatives for Mac
+	// g/G for top/bottom (vim-style)
+	if err := g.SetKeybinding(EventsView, 'g', gocui.ModNone, ui.moveToTop); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(EventsView, 'G', gocui.ModNone, ui.moveToBottom); err != nil {
+		return err
+	}
+
+	// Navigation - Global home/end keys (fallback)
+	if err := g.SetKeybinding("", gocui.KeyHome, gocui.ModNone, ui.moveToTop); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", gocui.KeyEnd, gocui.ModNone, ui.moveToBottom); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", 'g', gocui.ModNone, ui.moveToTop); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", 'G', gocui.ModNone, ui.moveToBottom); err != nil {
 		return err
 	}
 
@@ -419,6 +512,11 @@ func (ui *UI) keybindings(g *gocui.Gui) error {
 		return err
 	}
 
+	// Debug - test if any key is being received
+	if err := g.SetKeybinding("", 't', gocui.ModNone, ui.debugKeyPress); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -429,9 +527,11 @@ func (ui *UI) quit(g *gocui.Gui, v *gocui.View) error {
 
 // moveUp moves the selection up
 func (ui *UI) moveUp(g *gocui.Gui, v *gocui.View) error {
-	if ui.state.ScrollOffset > 0 {
-		ui.state.ScrollOffset--
-		ui.updateEventsView(v)
+	_, cy := v.Cursor()
+	if cy > 0 {
+		if err := v.SetCursor(0, cy-1); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -439,9 +539,74 @@ func (ui *UI) moveUp(g *gocui.Gui, v *gocui.View) error {
 // moveDown moves the selection down
 func (ui *UI) moveDown(g *gocui.Gui, v *gocui.View) error {
 	filteredEvents := ui.getFilteredEvents()
-	if ui.state.ScrollOffset < len(filteredEvents)-1 {
-		ui.state.ScrollOffset++
-		ui.updateEventsView(v)
+	lines := len(filteredEvents)
+	_, cy := v.Cursor()
+	if cy < lines-1 {
+		if err := v.SetCursor(0, cy+1); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// moveLeft moves the selection left (previous page or previous item)
+func (ui *UI) moveLeft(g *gocui.Gui, v *gocui.View) error {
+	// For now, moveLeft behaves like moveUp for consistency
+	return ui.moveUp(g, v)
+}
+
+// moveRight moves the selection right (next page or next item)
+func (ui *UI) moveRight(g *gocui.Gui, v *gocui.View) error {
+	// For now, moveRight behaves like moveDown for consistency
+	return ui.moveDown(g, v)
+}
+
+// pageUp moves the selection up by a page (10 items)
+func (ui *UI) pageUp(g *gocui.Gui, v *gocui.View) error {
+	_, cy := v.Cursor()
+	pageSize := 10
+	newY := cy - pageSize
+	if newY < 0 {
+		newY = 0
+	}
+	if err := v.SetCursor(0, newY); err != nil {
+		return err
+	}
+	return nil
+}
+
+// pageDown moves the selection down by a page (10 items)
+func (ui *UI) pageDown(g *gocui.Gui, v *gocui.View) error {
+	filteredEvents := ui.getFilteredEvents()
+	lines := len(filteredEvents)
+	_, cy := v.Cursor()
+	pageSize := 10
+	newY := cy + pageSize
+	if newY >= lines {
+		newY = lines - 1
+	}
+	if err := v.SetCursor(0, newY); err != nil {
+		return err
+	}
+	return nil
+}
+
+// moveToTop moves the selection to the top of the list
+func (ui *UI) moveToTop(g *gocui.Gui, v *gocui.View) error {
+	if err := v.SetCursor(0, 0); err != nil {
+		return err
+	}
+	return nil
+}
+
+// moveToBottom moves the selection to the bottom of the list
+func (ui *UI) moveToBottom(g *gocui.Gui, v *gocui.View) error {
+	filteredEvents := ui.getFilteredEvents()
+	lines := len(filteredEvents)
+	if lines > 0 {
+		if err := v.SetCursor(0, lines-1); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -618,4 +783,67 @@ func (ui *UI) CycleSort() {
 // GetFilteredEvents returns filtered events (public version for testing)
 func (ui *UI) GetFilteredEvents() []*FileEvent {
 	return ui.getFilteredEvents()
+}
+
+// MoveUp moves the selection up (public version for testing)
+func (ui *UI) MoveUp() {
+	if ui.state.ScrollOffset > 0 {
+		ui.state.ScrollOffset--
+	}
+}
+
+// MoveDown moves the selection down (public version for testing)
+func (ui *UI) MoveDown() {
+	filteredEvents := ui.getFilteredEvents()
+	if ui.state.ScrollOffset < len(filteredEvents)-1 {
+		ui.state.ScrollOffset++
+	}
+}
+
+// MoveLeft moves the selection left (public version for testing)
+func (ui *UI) MoveLeft() {
+	ui.MoveUp() // For now, same as MoveUp
+}
+
+// MoveRight moves the selection right (public version for testing)
+func (ui *UI) MoveRight() {
+	ui.MoveDown() // For now, same as MoveDown
+}
+
+// PageUp moves the selection up by a page (public version for testing)
+func (ui *UI) PageUp() {
+	pageSize := 10
+	newOffset := ui.state.ScrollOffset - pageSize
+	if newOffset < 0 {
+		newOffset = 0
+	}
+	ui.state.ScrollOffset = newOffset
+}
+
+// PageDown moves the selection down by a page (public version for testing)
+func (ui *UI) PageDown() {
+	filteredEvents := ui.getFilteredEvents()
+	pageSize := 10
+	newOffset := ui.state.ScrollOffset + pageSize
+	if newOffset >= len(filteredEvents) {
+		newOffset = len(filteredEvents) - 1
+	}
+	if newOffset < 0 {
+		newOffset = 0
+	}
+	ui.state.ScrollOffset = newOffset
+}
+
+// MoveToTop moves the selection to the top (public version for testing)
+func (ui *UI) MoveToTop() {
+	ui.state.ScrollOffset = 0
+}
+
+// MoveToBottom moves the selection to the bottom (public version for testing)
+func (ui *UI) MoveToBottom() {
+	filteredEvents := ui.getFilteredEvents()
+	ui.state.ScrollOffset = len(filteredEvents) - 1
+	if ui.state.ScrollOffset < 0 {
+		ui.state.ScrollOffset = 0
+	}
 }

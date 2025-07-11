@@ -44,3 +44,18 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp 
+
+# Test files
+test_file*.txt
+test_mac_keyboard.txt
+test_windows_keyboard.txt
+test_linux_keyboard.txt
+test_mac_mouse.txt
+test_windows_mouse.txt
+test_linux_mouse.txt
+test_mac_touchpad.txt
+test_windows_touchpad.txt
+test_linux_touchpad.txt
+
+# Generated files
+watch-fs

@@ -92,7 +92,12 @@ watch-fs -path ./my-project
 
 ### Navigation
 
-- **↑/↓** : Navigate through events
+- **↑/↓/←/→** : Navigate through events (arrow keys)
+- **h/j/k/l** : Alternative navigation (vim-style, for Mac French keyboards)
+- **Page Up/Page Down** : Navigate by page (10 items at a time)
+- **u/d** : Alternative page navigation (for Mac French keyboards)
+- **Home/End** : Jump to top/bottom of the list
+- **g/G** : Alternative top/bottom navigation (vim-style, for Mac French keyboards)
 - **q** : Quit the application
 - **Ctrl+C** : Quit the application
 
@@ -113,6 +118,8 @@ watch-fs -path ./my-project
 - **REMOVE** (Red) : File or directory deletion
 - **RENAME** (Magenta) : File or directory renaming
 - **CHMOD** (Blue) : Permission changes
+
+> **Note**: All fsnotify event types are properly supported, including combined operations. Events previously showing as "UNKNOWN" are now correctly identified.
 
 ## Sort Options
 
