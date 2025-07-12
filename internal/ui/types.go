@@ -41,13 +41,16 @@ type UIState struct {
 	SelectedPath    string
 	ScrollOffset    int
 	MaxEvents       int
-	AggregateEvents bool // Toggle for event aggregation
+	AggregateEvents bool       // Toggle for event aggregation
+	ShowDetails     bool       // Toggle for details popup
+	SelectedEvent   *FileEvent // Currently selected event for details
 }
 
 // ViewNames for the TUI
 const (
-	EventsView = "events"
-	StatusView = "status"
-	FilterView = "filter"
-	HelpView   = "help"
+	EventsView  = "events"
+	StatusView  = "status"
+	FilterView  = "filter"
+	HelpView    = "help"
+	DetailsView = "details"
 )

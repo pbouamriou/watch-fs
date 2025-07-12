@@ -36,7 +36,9 @@ func NewUI(watcher interface {
 			Filter:          Filter{ShowDirs: true, ShowFiles: true},
 			SortOption:      SortByTime,
 			MaxEvents:       1000,
-			AggregateEvents: true, // Enable aggregation by default
+			AggregateEvents: true,  // Enable aggregation by default
+			ShowDetails:     false, // Details popup hidden by default
+			SelectedEvent:   nil,   // No event selected by default
 		},
 		watcher:  watcher,
 		rootPath: rootPath,
@@ -117,9 +119,40 @@ func (ui *UI) layout(g *gocui.Gui) error {
 		ui.updateHelpView(v)
 	}
 
-	// Set EventsView as the default active view
-	if _, err := g.SetCurrentView(EventsView); err != nil {
-		return err
+	// Details popup (overlay)
+	if ui.state.ShowDetails && ui.state.SelectedEvent != nil {
+		// Calculate popup size and position (centered)
+		popupWidth := 60
+		popupHeight := 12
+		x0 := (maxX - popupWidth) / 2
+		y0 := (maxY - popupHeight) / 2
+		x1 := x0 + popupWidth
+		y1 := y0 + popupHeight
+
+		if v, err := g.SetView(DetailsView, x0, y0, x1, y1); err != nil {
+			if err != gocui.ErrUnknownView {
+				return err
+			}
+			v.Title = " Event Details "
+			v.Frame = true
+			v.BgColor = gocui.ColorBlack
+			v.FgColor = gocui.ColorWhite
+			ui.updateDetailsView(v)
+		}
+	} else {
+		// Remove details view if not needed
+		g.DeleteView(DetailsView)
+	}
+
+	// Set EventsView as the default active view (unless details are shown)
+	if !ui.state.ShowDetails {
+		if _, err := g.SetCurrentView(EventsView); err != nil {
+			return err
+		}
+	} else {
+		if _, err := g.SetCurrentView(DetailsView); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -192,7 +225,71 @@ func (ui *UI) updateEventsView(v *gocui.View) {
 // updateHelpView updates the help view
 func (ui *UI) updateHelpView(v *gocui.View) {
 	v.Clear()
-	_, _ = fmt.Fprintf(v, "q: Quit | f: Toggle files | d: Toggle dirs | a: Toggle aggregate | s: Sort | ↑↓←→/hjkl: Navigate | PgUp/PgDn/u/d: Page | Home/End/g/G: Top/Bottom")
+	_, _ = fmt.Fprintf(v, "q: Quit | f: Toggle files | d: Toggle dirs | a: Toggle aggregate | s: Sort | ↑↓←→/hjkl: Navigate | PgUp/PgDn/u/d: Page | Home/End/g/G: Top/Bottom | Enter: Details")
+}
+
+// updateDetailsView updates the details popup view
+func (ui *UI) updateDetailsView(v *gocui.View) {
+	v.Clear()
+	if ui.state.SelectedEvent == nil {
+		return
+	}
+
+	event := ui.state.SelectedEvent
+	cyan := color.New(color.FgCyan).SprintFunc()
+	yellow := color.New(color.FgYellow).SprintFunc()
+	green := color.New(color.FgGreen).SprintFunc()
+	red := color.New(color.FgRed).SprintFunc()
+	blue := color.New(color.FgBlue).SprintFunc()
+	magenta := color.New(color.FgMagenta).SprintFunc()
+
+	// Format operation with color
+	var operationStr string
+	if event.Operation.Has(fsnotify.Create) {
+		operationStr = green("CREATE")
+	} else if event.Operation.Has(fsnotify.Write) {
+		operationStr = yellow("WRITE")
+	} else if event.Operation.Has(fsnotify.Remove) {
+		operationStr = red("REMOVE")
+	} else if event.Operation.Has(fsnotify.Rename) {
+		operationStr = magenta("RENAME")
+	} else if event.Operation.Has(fsnotify.Chmod) {
+		operationStr = blue("CHMOD")
+	} else {
+		operationStr = "UNKNOWN"
+	}
+
+	// Get file info if possible
+	fileInfo, err := ui.getFileInfo(event.Path)
+	fileSize := "N/A"
+	fileMode := "N/A"
+	if err == nil && fileInfo != nil {
+		fileSize = fmt.Sprintf("%d bytes", fileInfo.Size())
+		fileMode = fileInfo.Mode().String()
+	}
+
+	// Display detailed information
+	_, _ = fmt.Fprintf(v, "%sEvent Details%s\n", cyan("="), cyan("="))
+	_, _ = fmt.Fprintf(v, "\n")
+	_, _ = fmt.Fprintf(v, "%s: %s\n", cyan("Operation"), operationStr)
+	_, _ = fmt.Fprintf(v, "%s: %s\n", cyan("Path"), event.Path)
+	_, _ = fmt.Fprintf(v, "%s: %s\n", cyan("Type"), yellow(func() string {
+		if event.IsDir {
+			return "Directory"
+		}
+		return "File"
+	}()))
+	_, _ = fmt.Fprintf(v, "%s: %s\n", cyan("Timestamp"), event.Timestamp.Format("2006-01-02 15:04:05.000"))
+	_, _ = fmt.Fprintf(v, "%s: %d\n", cyan("Count"), event.Count)
+
+	if err == nil && fileInfo != nil {
+		_, _ = fmt.Fprintf(v, "%s: %s\n", cyan("Size"), fileSize)
+		_, _ = fmt.Fprintf(v, "%s: %s\n", cyan("Permissions"), fileMode)
+		_, _ = fmt.Fprintf(v, "%s: %s\n", cyan("Modified"), fileInfo.ModTime().Format("2006-01-02 15:04:05"))
+	}
+
+	_, _ = fmt.Fprintf(v, "\n")
+	_, _ = fmt.Fprintf(v, "%sPress ESC or q to close%s", yellow(""), yellow(""))
 }
 
 // renderEvent renders a single event with colors
@@ -512,6 +609,21 @@ func (ui *UI) keybindings(g *gocui.Gui) error {
 		return err
 	}
 
+	// Event details - Escape to hide details (global)
+	if err := g.SetKeybinding("", gocui.KeyEsc, gocui.ModNone, ui.hideEventDetails); err != nil {
+		return err
+	}
+
+	// Event details - Enter to hide details when popup is open (global)
+	if err := g.SetKeybinding("", gocui.KeyEnter, gocui.ModNone, ui.toggleEventDetails); err != nil {
+		return err
+	}
+
+	// Event details - q to hide details (alternative, global)
+	if err := g.SetKeybinding("", 'q', gocui.ModNone, ui.hideEventDetails); err != nil {
+		return err
+	}
+
 	// Debug - test if any key is being received
 	if err := g.SetKeybinding("", 't', gocui.ModNone, ui.debugKeyPress); err != nil {
 		return err
@@ -522,6 +634,11 @@ func (ui *UI) keybindings(g *gocui.Gui) error {
 
 // quit quits the application
 func (ui *UI) quit(g *gocui.Gui, v *gocui.View) error {
+	// If details popup is shown, hide it instead of quitting
+	if ui.state.ShowDetails {
+		return ui.hideEventDetails(g, v)
+	}
+
 	return gocui.ErrQuit
 }
 
@@ -846,4 +963,59 @@ func (ui *UI) MoveToBottom() {
 	if ui.state.ScrollOffset < 0 {
 		ui.state.ScrollOffset = 0
 	}
+}
+
+// showEventDetails shows the details popup for the currently selected event
+func (ui *UI) showEventDetails(g *gocui.Gui, v *gocui.View) error {
+	filteredEvents := ui.getFilteredEvents()
+	if len(filteredEvents) == 0 {
+		return nil
+	}
+
+	// Get current cursor position
+	_, cy := v.Cursor()
+	if cy < 0 || cy >= len(filteredEvents) {
+		return nil
+	}
+
+	// Set the selected event and show details
+	ui.state.SelectedEvent = filteredEvents[cy]
+	ui.state.ShowDetails = true
+
+	// Update the layout to show the popup
+	return ui.layout(g)
+}
+
+// hideEventDetails hides the details popup
+func (ui *UI) hideEventDetails(g *gocui.Gui, v *gocui.View) error {
+	// Only hide details if popup is currently shown
+	if ui.state.ShowDetails {
+		ui.state.ShowDetails = false
+		ui.state.SelectedEvent = nil
+
+		// Update the layout to hide the popup
+		return ui.layout(g)
+	}
+
+	// If popup is not shown, this might be a 'q' press in main view
+	// Check if we're in the main view and should quit
+	if v != nil && v.Name() == EventsView {
+		return ui.quit(g, v)
+	}
+
+	return nil
+}
+
+// toggleEventDetails toggles the details popup (show if closed, hide if open)
+func (ui *UI) toggleEventDetails(g *gocui.Gui, v *gocui.View) error {
+	if ui.state.ShowDetails {
+		// If popup is open, close it
+		return ui.hideEventDetails(g, v)
+	} else {
+		// If popup is closed, open it (only if we're in EventsView)
+		if v != nil && v.Name() == EventsView {
+			return ui.showEventDetails(g, v)
+		}
+	}
+	return nil
 }

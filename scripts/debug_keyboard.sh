@@ -1,17 +1,15 @@
 #!/bin/bash
 
-echo "🔍 Debug des touches de navigation"
-echo "================================"
+echo "🔍 Navigation Keys Debug"
+echo "========================="
 echo ""
-
-echo "📋 Test simple :"
-echo "1. L'application va se lancer"
-echo "2. Appuyez sur 'q' pour quitter"
-echo "3. Si 'q' ne fonctionne pas, le problème est plus profond"
+echo "📋 Simple test:"
+echo "1. The application will start"
+echo "2. Press 'q' to quit"
+echo "3. If 'q' does not work, the problem is deeper"
 echo ""
-
-echo "🚀 Lancement de watch-fs..."
-echo "Appuyez sur 'q' pour quitter"
+echo "🚀 Launching watch-fs..."
+echo "Press 'q' to quit"
 echo ""
 
 ./bin/watch-fs -path . 

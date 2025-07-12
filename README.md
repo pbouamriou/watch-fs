@@ -98,6 +98,7 @@ watch-fs -path ./my-project
 - **u/d** : Alternative page navigation (for Mac French keyboards)
 - **Home/End** : Jump to top/bottom of the list
 - **g/G** : Alternative top/bottom navigation (vim-style, for Mac French keyboards)
+- **Enter** : Show event details popup
 - **q** : Quit the application
 - **Ctrl+C** : Quit the application
 
@@ -120,6 +121,21 @@ watch-fs -path ./my-project
 - **CHMOD** (Blue) : Permission changes
 
 > **Note**: All fsnotify event types are properly supported, including combined operations. Events previously showing as "UNKNOWN" are now correctly identified.
+
+## Event Details Popup
+
+Press **Enter** on any event to view detailed information in a popup window. The popup shows:
+
+- **Operation** : Type of file system operation with color coding
+- **Path** : Full file or directory path
+- **Type** : Whether it's a file or directory
+- **Timestamp** : Exact time with milliseconds precision
+- **Count** : Number of similar events (when aggregation is enabled)
+- **Size** : File size in bytes (for files)
+- **Permissions** : File permissions and mode
+- **Modified** : Last modification time
+
+Press **Enter**, **Escape**, or **q** to close the details popup. When the popup is open, **q** closes the popup instead of quitting the application.
 
 ## Sort Options
 

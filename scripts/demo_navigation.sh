@@ -1,33 +1,28 @@
 #!/bin/bash
 
-# Script de démonstration des nouvelles fonctionnalités de navigation
-# pour watch-fs
+# Demo script for the new navigation features of watch-fs
 
-echo "🚀 Démonstration des nouvelles fonctionnalités de navigation de watch-fs"
-echo "=================================================================="
+echo "🚀 Demonstration of the new navigation features in watch-fs"
+echo "============================================================="
 echo ""
-
-echo "📋 Nouvelles touches de navigation ajoutées :"
-echo "  • Flèches gauche/droite (←/→) : Navigation dans la liste"
-echo "  • Page Up/Page Down : Navigation par page (10 éléments)"
-echo "  • Home/End : Aller au début/fin de la liste"
+echo "📋 New navigation keys added:"
+echo "  • Left/Right arrows (←/→): Navigate in the list"
+echo "  • Page Up/Page Down: Page navigation (10 items)"
+echo "  • Home/End: Go to the beginning/end of the list"
 echo ""
-
-echo "🎮 Raccourcis complets disponibles :"
-echo "  • ↑/↓/←/→ : Navigation élément par élément"
-echo "  • PgUp/PgDn : Navigation par page"
-echo "  • Home/End : Aller au début/fin"
-echo "  • f : Basculer l'affichage des fichiers"
-echo "  • d : Basculer l'affichage des répertoires"
-echo "  • a : Basculer l'agrégation d'événements"
-echo "  • s : Changer le tri"
-echo "  • q : Quitter"
+echo "🎮 Full available shortcuts:"
+echo "  • ↑/↓/←/→: Element by element navigation"
+echo "  • PgUp/PgDn: Page navigation"
+echo "  • Home/End: Go to beginning/end"
+echo "  • f: Toggle file display"
+echo "  • d: Toggle directory display"
+echo "  • a: Toggle event aggregation"
+echo "  • s: Change sorting"
+echo "  • q: Quit"
 echo ""
-
-echo "🧪 Pour tester les nouvelles fonctionnalités :"
-echo "  1. Lancez watch-fs : ./bin/watch-fs -path ."
-echo "  2. Créez quelques fichiers pour générer des événements"
-echo "  3. Utilisez les nouvelles touches de navigation"
+echo "🧪 To test the new features:"
+echo "  1. Launch watch-fs: ./bin/watch-fs -path ."
+echo "  2. Create some files to generate events"
+echo "  3. Use the new navigation keys"
 echo ""
-
-echo "✅ Toutes les fonctionnalités sont testées et documentées !" 
+echo "✅ All features are tested and documented!" 
