@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Event Details Popup**: Press Enter on any event to view detailed information
+  - Shows operation type, path, file/directory type, timestamp, count, size, permissions, and modification time
+  - Popup is centered on screen with proper styling
+  - Press Enter, Escape, or q to close the popup (Enter acts as toggle)
+  - Added comprehensive test script to validate the functionality
+  - Updated help text to include Enter: Details instruction
+
 ### Fixed
 
 - **UNKNOWN Events**: Fixed issue where combined fsnotify operations were showing as "UNKNOWN"
@@ -18,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Test script `scripts/test_unknown_events.sh` to validate UNKNOWN events fix
+- Test script `scripts/test_event_details.sh` to validate event details popup functionality
 - Documentation for UNKNOWN events fix in `docs/UNKNOWN_EVENTS_FIX.md`
 
 ## [1.0.0] - 2024-01-XX
