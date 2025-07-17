@@ -33,6 +33,43 @@ const (
 	SortByCount
 )
 
+// ExportFormat represents the format for import/export
+type ExportFormat int
+
+const (
+	FormatSQLite ExportFormat = iota
+	FormatJSON
+)
+
+// FileDialogMode represents the mode of the file dialog
+type FileDialogMode int
+
+const (
+	ModeSave FileDialogMode = iota
+	ModeOpen
+)
+
+// FileEntry represents a file or directory in the file dialog
+type FileEntry struct {
+	Name    string
+	IsDir   bool
+	Size    int64
+	ModTime time.Time
+	Path    string
+}
+
+// FileDialogState represents the state of the file dialog
+type FileDialogState struct {
+	CurrentPath string
+	Files       []*FileEntry
+	SelectedIdx int
+	Mode        FileDialogMode
+	Filter      string // File extension filter
+	Filename    string // Custom filename for save mode
+	Placeholder bool   // Whether the filename is a placeholder
+	IsEditing   bool   // Whether we're editing the filename
+}
+
 // UIState represents the current state of the UI
 type UIState struct {
 	Events          []*FileEvent
@@ -41,16 +78,36 @@ type UIState struct {
 	SelectedPath    string
 	ScrollOffset    int
 	MaxEvents       int
-	AggregateEvents bool       // Toggle for event aggregation
-	ShowDetails     bool       // Toggle for details popup
-	SelectedEvent   *FileEvent // Currently selected event for details
+	AggregateEvents bool            // Toggle for event aggregation
+	ShowDetails     bool            // Toggle for details popup
+	SelectedEvent   *FileEvent      // Currently selected event for details
+	ExportFilename  string          // Current export filename
+	ImportFilename  string          // Current import filename
+	ShowFileDialog  bool            // Toggle for file dialog
+	FileDialog      FileDialogState // File dialog state
+	CurrentFocus    FocusMode       // Current focus mode
 }
 
 // ViewNames for the TUI
 const (
-	EventsView  = "events"
-	StatusView  = "status"
-	FilterView  = "filter"
-	HelpView    = "help"
-	DetailsView = "details"
+	EventsView     = "events"
+	StatusView     = "status"
+	FilterView     = "filter"
+	HelpView       = "help"
+	DetailsView    = "details"
+	ExportView     = "export"
+	ImportView     = "import"
+	FileDialogView = "filedialog"
+	FileListView   = "filelist"
+	FilenameView   = "filename"
+	PathView       = "path"
+)
+
+// FocusMode represents the current focus mode of the UI
+type FocusMode int
+
+const (
+	FocusMain FocusMode = iota
+	FocusDetails
+	FocusFileDialog
 )

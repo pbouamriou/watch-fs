@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pbouamriou/watch-fs/internal/ui"
 	"github.com/pbouamriou/watch-fs/internal/watcher"
+	"github.com/pbouamriou/watch-fs/pkg/logger"
 	"github.com/pbouamriou/watch-fs/pkg/utils"
 )
 
@@ -16,6 +16,12 @@ import (
 var version = "dev"
 
 func main() {
+	// Initialise le logger
+	if err := logger.Init(); err != nil {
+		fmt.Fprintf(os.Stderr, "Erreur d'initialisation du logger: %v\n", err)
+		os.Exit(1)
+	}
+
 	var rootPath string
 	var useTUI bool
 	var showVersion bool
@@ -37,18 +43,21 @@ func main() {
 
 	// Validate directory
 	if err := utils.ValidateDirectory(rootPath); err != nil {
-		log.Fatalf("Invalid directory: %s\n", rootPath)
+		logger.Error(err, "Invalid directory")
+		os.Exit(1)
 	}
 
 	// Create watcher
 	fileWatcher, err := watcher.New(rootPath)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(err, "Failed to create watcher")
+		os.Exit(1)
 	}
 
 	// Add recursive watching
 	if err := fileWatcher.AddRecursive(rootPath); err != nil {
-		log.Fatal(err)
+		logger.Error(err, "Failed to add recursive watching")
+		os.Exit(1)
 	}
 	defer func() { _ = fileWatcher.Close() }()
 
@@ -56,7 +65,8 @@ func main() {
 		// Use TUI mode
 		ui := ui.NewUI(fileWatcher, rootPath)
 		if err := ui.Run(); err != nil {
-			log.Fatal(err)
+			logger.Error(err, "TUI exited with error")
+			os.Exit(1)
 		}
 	} else {
 		// Use simple console mode (original behavior)
@@ -82,7 +92,7 @@ func main() {
 					if !ok {
 						return
 					}
-					log.Println("Watcher error:", err)
+					logger.Error(err, "Watcher error")
 				}
 			}
 		}()
