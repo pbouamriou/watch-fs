@@ -98,7 +98,6 @@ watch-fs -path ./my-project
 - **↑/↓/←/→** : Navigate through events (arrow keys)
 - **h/j/k/l** : Alternative navigation (vim-style, for Mac French keyboards)
 - **Page Up/Page Down** : Navigate by page (10 items at a time)
-- **u/d** : Alternative page navigation (for Mac French keyboards)
 - **Home/End** : Jump to top/bottom of the list
 - **g/G** : Alternative top/bottom navigation (vim-style, for Mac French keyboards)
 - **Enter** : Show event details popup
