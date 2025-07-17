@@ -56,6 +56,13 @@ test_linux_mouse.txt
 test_mac_touchpad.txt
 test_windows_touchpad.txt
 test_linux_touchpad.txt
+test_files/
+test_debug/
+test_save/
+test_files_arrows/
 
 # Generated files
 watch-fs
+
+# Saves
+watch-fs-*.db

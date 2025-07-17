@@ -2,14 +2,78 @@ module github.com/pbouamriou/watch-fs
 
 go 1.24.4
 
-require github.com/fsnotify/fsnotify v1.9.0
+require (
+	github.com/fatih/color v1.18.0
+	github.com/fsnotify/fsnotify v1.9.0
+	github.com/jesseduffield/gocui v0.3.1-0.20250711082438-4aa4fd0b4d22
+	github.com/mattn/go-sqlite3 v1.14.28
+)
 
 require (
-	github.com/fatih/color v1.18.0 // indirect
-	github.com/jroimartin/gocui v0.5.0 // indirect
+	dario.cat/mergo v1.0.1 // indirect
+	github.com/Microsoft/go-winio v0.6.2 // indirect
+	github.com/ProtonMail/go-crypto v1.1.6 // indirect
+	github.com/adrg/xdg v0.4.0 // indirect
+	github.com/atotto/clipboard v0.1.4 // indirect
+	github.com/aybabtme/humanlog v0.4.1 // indirect
+	github.com/bahlo/generic-list-go v0.2.0 // indirect
+	github.com/buger/jsonparser v1.1.1 // indirect
+	github.com/cloudflare/circl v1.6.1 // indirect
+	github.com/cloudfoundry/jibber_jabber v0.0.0-20151120183258-bcc4c8345a21 // indirect
+	github.com/creack/pty v1.1.11 // indirect
+	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
+	github.com/emirpasic/gods v1.18.1 // indirect
+	github.com/gdamore/encoding v1.0.1 // indirect
+	github.com/gdamore/tcell/v2 v2.8.1 // indirect
+	github.com/go-errors/errors v1.5.1 // indirect
+	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
+	github.com/go-git/go-billy/v5 v5.6.2 // indirect
+	github.com/go-logfmt/logfmt v0.5.0 // indirect
+	github.com/gobwas/glob v0.2.3 // indirect
+	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
+	github.com/gookit/color v1.4.2 // indirect
+	github.com/integrii/flaggy v1.4.0 // indirect
+	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
+	github.com/jesseduffield/generics v0.0.0-20250517122708-b0b4a53a6f5c // indirect
+	github.com/jesseduffield/go-git/v5 v5.14.1-0.20250407170251-e1a013310ccd // indirect
+	github.com/jesseduffield/kill v0.0.0-20250101124109-e216ddbe133a // indirect
+	github.com/jesseduffield/lazycore v0.0.0-20221012050358-03d2e40243c5 // indirect
+	github.com/jesseduffield/lazygit v0.53.1 // indirect
+	github.com/jesseduffield/minimal/gitignore v0.3.3-0.20211018110810-9cde264e6b1e // indirect
+	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
+	github.com/karimkhaleel/jsonschema v0.0.0-20231001195015-d933f0d94ea3 // indirect
+	github.com/kevinburke/ssh_config v1.2.0 // indirect
+	github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515 // indirect
+	github.com/kyokomi/emoji/v2 v2.2.8 // indirect
+	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.9 // indirect
-	github.com/nsf/termbox-go v1.1.1 // indirect
-	golang.org/x/sys v0.25.0 // indirect
+	github.com/mattn/go-runewidth v0.0.16 // indirect
+	github.com/mgutz/str v1.2.0 // indirect
+	github.com/petermattis/goid v0.0.0-20240813172612-4fcff4a6cae7 // indirect
+	github.com/pjbgf/sha1cd v0.3.2 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/sahilm/fuzzy v0.1.0 // indirect
+	github.com/samber/lo v1.31.0 // indirect
+	github.com/sasha-s/go-deadlock v0.3.5 // indirect
+	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/skeema/knownhosts v1.3.1 // indirect
+	github.com/spf13/afero v1.9.5 // indirect
+	github.com/spkg/bom v0.0.0-20160624110644-59b7046e48ad // indirect
+	github.com/stefanhaller/git-todo-parser v0.0.7-0.20250429125209-dcf39e4641f5 // indirect
+	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
+	github.com/xanzy/ssh-agent v0.3.3 // indirect
+	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
+	golang.org/x/crypto v0.37.0 // indirect
+	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
+	golang.org/x/net v0.39.0 // indirect
+	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/term v0.32.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
+	gopkg.in/ozeidan/fuzzy-patricia.v3 v3.0.0 // indirect
+	gopkg.in/warnings.v0 v0.1.2 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

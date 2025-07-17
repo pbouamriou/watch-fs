@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Import/Export Functionality**: Save and load file system events to external files
+
+  - **SQLite Database Export** (Recommended): Fast, indexed format for large datasets
+  - **JSON Format Export**: Human-readable format for sharing and inspection
+  - **Modern File Dialog**: Full file browser interface similar to graphical applications
+
+- **Ctrl+E**: Open file dialog to save events (navigate directories, select location)
+- **Ctrl+I**: Open file dialog to load events (browse directories, select file)
+- **File Navigation**: Arrow keys and hjkl for directory navigation
+- **File Listing**: Shows files and directories with sizes and icons
+- **Path Display**: Current directory path shown at top of dialog
+- **Filter Support**: Automatically filters for relevant file types (.db/.json)
+- **Visual Selection**: Highlight and select files with visual feedback
+
+  - **Status Indicators**: Shows export file availability in status bar
+  - **Comprehensive Documentation**: Complete guide with examples and troubleshooting
+  - **Test Script**: Automated testing of import/export functionality
+  - **Database Indexing**: Optimized SQLite schema with indexes for fast queries
+  - **Error Handling**: Graceful fallback from SQLite to JSON format
+  - **Metadata Support**: Export includes timestamps and event counts
+
 - **Event Details Popup**: Press Enter on any event to view detailed information
   - Shows operation type, path, file/directory type, timestamp, count, size, permissions, and modification time
   - Popup is centered on screen with proper styling
@@ -28,7 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Test script `scripts/test_unknown_events.sh` to validate UNKNOWN events fix
 - Test script `scripts/test_event_details.sh` to validate event details popup functionality
+- Test script `scripts/test_import_export.sh` to validate import/export functionality
 - Documentation for UNKNOWN events fix in `docs/UNKNOWN_EVENTS_FIX.md`
+- Documentation for import/export functionality in `docs/IMPORT_EXPORT_FEATURE.md`
 
 ## [1.0.0] - 2024-01-XX
 
