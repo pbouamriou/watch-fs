@@ -103,7 +103,7 @@ func (v *Views) UpdateHelpView(view *gocui.View) {
 
 	switch v.ui.state.CurrentFocus {
 	case FocusMain:
-		helpText = "q: Quit | f: Toggle files | d: Toggle dirs | a: Toggle aggregate | s: Sort | ↑↓←→/hjkl: Navigate | PgUp/PgDn/u/d: Page | Home/End/g/G: Top/Bottom | Enter: Details | Ctrl+E: Export | Ctrl+I: Import"
+		helpText = "q: Quit | f: Toggle files | d: Toggle dirs | a: Toggle aggregate | s: Sort | ↑↓←→/hjkl: Navigate | PgUp/PgDn: Page | Home/End/g/G: Top/Bottom | Enter: Details | Ctrl+E: Export | Ctrl+I: Import"
 
 	case FocusDetails:
 		helpText = "ESC/q: Close details | Enter: Close details"

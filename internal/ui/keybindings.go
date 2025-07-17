@@ -54,12 +54,6 @@ func (kb *Keybindings) Setup(g *gocui.Gui) error {
 	if err := g.SetKeybinding(EventsView, gocui.KeyPgdn, gocui.ModNone, kb.navigationPageDown); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding(EventsView, 'u', gocui.ModNone, kb.navigationPageUp); err != nil {
-		return err
-	}
-	if err := g.SetKeybinding(EventsView, 'd', gocui.ModNone, kb.navigationPageDown); err != nil {
-		return err
-	}
 	if err := g.SetKeybinding(EventsView, gocui.KeyHome, gocui.ModNone, kb.navigationMoveToTop); err != nil {
 		return err
 	}
