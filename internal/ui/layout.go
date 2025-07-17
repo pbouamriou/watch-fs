@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/go-errors/errors"
+	"github.com/pbouamriou/watch-fs/pkg/logger"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/jesseduffield/gocui"
@@ -136,7 +137,9 @@ func (l *Layout) layoutDetailsPopup(g *gocui.Gui, maxX, maxY int) error {
 		}
 	} else {
 		// Remove details view if not needed
-		g.DeleteView(DetailsView)
+		if err := g.DeleteView(DetailsView); err != nil {
+			logger.Error(err, "DeleteView error")
+		}
 	}
 	return nil
 }
@@ -229,10 +232,18 @@ func (l *Layout) layoutFileDialog(g *gocui.Gui, maxX, maxY int) error {
 		}
 	} else {
 		// Remove file dialog views if not needed
-		g.DeleteView(FileDialogView)
-		g.DeleteView(FilenameView)
-		g.DeleteView(PathView)
-		g.DeleteView(FileListView)
+		if err := g.DeleteView(FileDialogView); err != nil {
+			logger.Error(err, "DeleteView error")
+		}
+		if err := g.DeleteView(FilenameView); err != nil {
+			logger.Error(err, "DeleteView error")
+		}
+		if err := g.DeleteView(PathView); err != nil {
+			logger.Error(err, "DeleteView error")
+		}
+		if err := g.DeleteView(FileListView); err != nil {
+			logger.Error(err, "DeleteView error")
+		}
 	}
 	return nil
 }

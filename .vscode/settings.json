@@ -1,0 +1,6 @@
+{
+    "linter.enable": true,
+    "linter.lintTask.enable": true,
+    "linter.lintTask.command": "golangci-lint",
+    "linter.lintTask.args": ["run", "--fix"],
+}

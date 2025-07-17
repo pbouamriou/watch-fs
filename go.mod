@@ -54,6 +54,7 @@ require (
 	github.com/petermattis/goid v0.0.0-20240813172612-4fcff4a6cae7 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/rs/zerolog v1.34.0 // indirect
 	github.com/sahilm/fuzzy v0.1.0 // indirect
 	github.com/samber/lo v1.31.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.5 // indirect

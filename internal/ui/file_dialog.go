@@ -10,6 +10,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/jesseduffield/gocui"
+	"github.com/pbouamriou/watch-fs/pkg/logger"
 )
 
 const (
@@ -32,7 +33,9 @@ func (fd *FileDialog) Show(mode FileDialogMode, filter string) {
 	fd.ui.state.FileDialog.Mode = mode
 	fd.ui.state.FileDialog.Filter = filter
 	fd.ui.state.CurrentFocus = FocusFileDialog
-	fd.loadDirectory(".")
+	if err := fd.loadDirectory("."); err != nil {
+		logger.Error(err, "loadDirectory error")
+	}
 	if fd.ui.gui != nil {
 		fd.ui.gui.Update(func(g *gocui.Gui) error {
 			_, err := g.SetCurrentView(FileListView)
@@ -173,12 +176,16 @@ func (fd *FileDialog) Enter(g *gocui.Gui, v *gocui.View) error {
 			} else {
 				parentPath = filepath.Dir(fd.ui.state.FileDialog.CurrentPath)
 			}
-			fd.loadDirectory(parentPath)
+			if err := fd.loadDirectory(parentPath); err != nil {
+				logger.Error(err, "loadDirectory error")
+			}
 			// Force layout update after navigation
 			return fd.ui.layout.Layout(g)
 		} else {
 			// Go into directory
-			fd.loadDirectory(selected.Path)
+			if err := fd.loadDirectory(selected.Path); err != nil {
+				logger.Error(err, "loadDirectory error")
+			}
 			// Force layout update after navigation
 			return fd.ui.layout.Layout(g)
 		}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/pbouamriou/watch-fs/pkg/logger"
 )
 
 // ExportImport manages export and import operations
@@ -52,7 +53,11 @@ func (ei *ExportImport) exportToSQLite(filename string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error(err, "close error")
+		}
+	}()
 
 	// Create events table
 	createTableSQL := `
@@ -81,7 +86,11 @@ func (ei *ExportImport) exportToSQLite(filename string) error {
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %w", err)
 	}
-	defer stmt.Close()
+	defer func() {
+		if err := stmt.Close(); err != nil {
+			logger.Error(err, "stmt close error")
+		}
+	}()
 
 	for _, event := range ei.ui.state.Events {
 		_, err = stmt.Exec(event.Path, event.Operation.String(), event.Timestamp, event.IsDir, event.Count)
@@ -100,14 +109,22 @@ func (ei *ExportImport) importFromSQLite(filename string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error(err, "close error")
+		}
+	}()
 
 	// Query events
 	rows, err := db.Query(`SELECT path, operation, timestamp, is_dir, count FROM events ORDER BY timestamp DESC`)
 	if err != nil {
 		return fmt.Errorf("failed to query events: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			logger.Error(err, "rows close error")
+		}
+	}()
 
 	var events []*FileEvent
 	for rows.Next() {

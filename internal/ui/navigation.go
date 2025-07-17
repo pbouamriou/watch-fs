@@ -17,7 +17,7 @@ func NewNavigation(ui *UI) *Navigation {
 }
 
 // moveUp moves the selection up
-func (nav *Navigation) moveUp(g *gocui.Gui, v *gocui.View) error {
+func (nav *Navigation) moveUp(_ *gocui.Gui, v *gocui.View) error {
 	_, cy := v.Cursor()
 	if cy > 0 {
 		v.SetCursor(0, cy-1)
@@ -26,7 +26,7 @@ func (nav *Navigation) moveUp(g *gocui.Gui, v *gocui.View) error {
 }
 
 // moveDown moves the selection down
-func (nav *Navigation) moveDown(g *gocui.Gui, v *gocui.View) error {
+func (nav *Navigation) moveDown(_ *gocui.Gui, v *gocui.View) error {
 	filteredEvents := nav.ui.getFilteredEvents()
 	lines := len(filteredEvents)
 	_, cy := v.Cursor()
@@ -49,7 +49,7 @@ func (nav *Navigation) moveRight(g *gocui.Gui, v *gocui.View) error {
 }
 
 // pageUp moves the selection up by a page (10 items)
-func (nav *Navigation) pageUp(g *gocui.Gui, v *gocui.View) error {
+func (nav *Navigation) pageUp(_ *gocui.Gui, v *gocui.View) error {
 	_, cy := v.Cursor()
 	pageSize := 10
 	newY := cy - pageSize
@@ -61,7 +61,7 @@ func (nav *Navigation) pageUp(g *gocui.Gui, v *gocui.View) error {
 }
 
 // pageDown moves the selection down by a page (10 items)
-func (nav *Navigation) pageDown(g *gocui.Gui, v *gocui.View) error {
+func (nav *Navigation) pageDown(_ *gocui.Gui, v *gocui.View) error {
 	filteredEvents := nav.ui.getFilteredEvents()
 	lines := len(filteredEvents)
 	_, cy := v.Cursor()
@@ -75,13 +75,13 @@ func (nav *Navigation) pageDown(g *gocui.Gui, v *gocui.View) error {
 }
 
 // moveToTop moves the selection to the top of the list
-func (nav *Navigation) moveToTop(g *gocui.Gui, v *gocui.View) error {
+func (nav *Navigation) moveToTop(_ *gocui.Gui, v *gocui.View) error {
 	v.SetCursor(0, 0)
 	return nil
 }
 
 // moveToBottom moves the selection to the bottom of the list
-func (nav *Navigation) moveToBottom(g *gocui.Gui, v *gocui.View) error {
+func (nav *Navigation) moveToBottom(_ *gocui.Gui, v *gocui.View) error {
 	filteredEvents := nav.ui.getFilteredEvents()
 	lines := len(filteredEvents)
 	if lines > 0 {
@@ -91,7 +91,7 @@ func (nav *Navigation) moveToBottom(g *gocui.Gui, v *gocui.View) error {
 }
 
 // toggleFiles toggles file visibility
-func (nav *Navigation) toggleFiles(g *gocui.Gui, v *gocui.View) error {
+func (nav *Navigation) toggleFiles(g *gocui.Gui, _ *gocui.View) error {
 	nav.ui.state.Filter.ShowFiles = !nav.ui.state.Filter.ShowFiles
 	nav.ui.state.ScrollOffset = 0
 
@@ -105,7 +105,7 @@ func (nav *Navigation) toggleFiles(g *gocui.Gui, v *gocui.View) error {
 }
 
 // toggleDirs toggles directory visibility
-func (nav *Navigation) toggleDirs(g *gocui.Gui, v *gocui.View) error {
+func (nav *Navigation) toggleDirs(g *gocui.Gui, _ *gocui.View) error {
 	nav.ui.state.Filter.ShowDirs = !nav.ui.state.Filter.ShowDirs
 	nav.ui.state.ScrollOffset = 0
 
@@ -119,7 +119,7 @@ func (nav *Navigation) toggleDirs(g *gocui.Gui, v *gocui.View) error {
 }
 
 // toggleAggregate toggles event aggregation
-func (nav *Navigation) toggleAggregate(g *gocui.Gui, v *gocui.View) error {
+func (nav *Navigation) toggleAggregate(g *gocui.Gui, _ *gocui.View) error {
 	wasAggregated := nav.ui.state.AggregateEvents
 	nav.ui.state.AggregateEvents = !nav.ui.state.AggregateEvents
 
@@ -203,7 +203,7 @@ func (nav *Navigation) reaggregateEvents() {
 }
 
 // cycleSort cycles through sort options
-func (nav *Navigation) cycleSort(g *gocui.Gui, v *gocui.View) error {
+func (nav *Navigation) cycleSort(g *gocui.Gui, _ *gocui.View) error {
 	nav.ui.state.SortOption = (nav.ui.state.SortOption + 1) % 4
 	nav.ui.state.ScrollOffset = 0
 
