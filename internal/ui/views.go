@@ -37,8 +37,14 @@ func (v *Views) UpdateStatusView(view *gocui.View) {
 		exportInfo = fmt.Sprintf(" | Export: %s", green("JSON available"))
 	}
 
+	// Display watched directories
+	watchingInfo := v.ui.GetRootPathsDisplay()
+	if len(v.ui.rootPaths) > 1 {
+		watchingInfo = fmt.Sprintf("%s (%d dirs)", watchingInfo, len(v.ui.rootPaths))
+	}
+
 	_, _ = fmt.Fprintf(view, "Watching: %s | Events: %s | Sort: %s%s\n",
-		cyan(v.ui.rootPath),
+		cyan(watchingInfo),
 		yellow(len(v.ui.state.Events)),
 		cyan(v.ui.getSortOptionName()),
 		exportInfo)

@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/jesseduffield/gocui"
@@ -25,8 +26,11 @@ type UI struct {
 		Events() <-chan fsnotify.Event
 		Errors() <-chan error
 		AddDirectory(path string) error
+		GetRoots() []string
+		GetRoot() string
 	}
-	rootPath string
+	rootPath  string   // Primary root path for backward compatibility
+	rootPaths []string // All root paths being watched
 }
 
 // NewUI creates a new UI instance
@@ -34,7 +38,17 @@ func NewUI(watcher interface {
 	Events() <-chan fsnotify.Event
 	Errors() <-chan error
 	AddDirectory(path string) error
+	GetRoots() []string
+	GetRoot() string
 }, rootPath string) *UI {
+	// Get all root paths from the watcher
+	var rootPaths []string
+	if multiRootWatcher, ok := watcher.(interface{ GetRoots() []string }); ok {
+		rootPaths = multiRootWatcher.GetRoots()
+	} else {
+		rootPaths = []string{rootPath}
+	}
+
 	ui := &UI{
 		state: &UIState{
 			Events:          make([]*FileEvent, 0),
@@ -56,8 +70,9 @@ func NewUI(watcher interface {
 				Filter:      "*.db",
 			},
 		},
-		watcher:  watcher,
-		rootPath: rootPath,
+		watcher:   watcher,
+		rootPath:  rootPath,
+		rootPaths: rootPaths,
 	}
 	ui.fileDialog = NewFileDialog(ui)
 	ui.exportImport = NewExportImport(ui)
@@ -129,6 +144,26 @@ func (ui *UI) GetState() *UIState {
 // GetRootPath returns the root path being watched
 func (ui *UI) GetRootPath() string {
 	return ui.rootPath
+}
+
+// GetRootPaths returns all root paths being watched
+func (ui *UI) GetRootPaths() []string {
+	return ui.rootPaths
+}
+
+// GetRootPathsDisplay returns a formatted string of all root paths for display
+func (ui *UI) GetRootPathsDisplay() string {
+	if len(ui.rootPaths) == 1 {
+		return ui.rootPaths[0]
+	}
+
+	// For multiple paths, show them in a compact format
+	if len(ui.rootPaths) <= 3 {
+		return strings.Join(ui.rootPaths, ", ")
+	}
+
+	// For more than 3 paths, show first 2 and count of remaining
+	return fmt.Sprintf("%s, %s, +%d more", ui.rootPaths[0], ui.rootPaths[1], len(ui.rootPaths)-2)
 }
 
 // AddEvent adds an event (public version for testing)
