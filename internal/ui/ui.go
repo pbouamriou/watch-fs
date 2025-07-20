@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
@@ -12,15 +13,16 @@ import (
 
 // UI represents the terminal user interface
 type UI struct {
-	gui          *gocui.Gui
-	state        *UIState
-	fileDialog   *FileDialog
-	exportImport *ExportImport
-	navigation   *Navigation
-	views        *Views
-	keybindings  *Keybindings
-	layout       *Layout
-	events       *Events
+	gui           *gocui.Gui
+	state         *UIState
+	fileDialog    *FileDialog
+	exportImport  *ExportImport
+	navigation    *Navigation
+	views         *Views
+	keybindings   *Keybindings
+	layout        *Layout
+	events        *Events
+	folderManager *FolderManager
 
 	watcher interface {
 		Events() <-chan fsnotify.Event
@@ -51,23 +53,28 @@ func NewUI(watcher interface {
 
 	ui := &UI{
 		state: &UIState{
-			Events:          make([]*FileEvent, 0),
-			Filter:          Filter{ShowDirs: true, ShowFiles: true},
-			SortOption:      SortByTime,
-			MaxEvents:       1000,
-			AggregateEvents: true,      // Enable aggregation by default
-			ShowDetails:     false,     // Details popup hidden by default
-			SelectedEvent:   nil,       // No event selected by default
-			ExportFilename:  "",        // No export filename by default
-			ImportFilename:  "",        // No import filename by default
-			ShowFileDialog:  false,     // File dialog hidden by default
-			CurrentFocus:    FocusMain, // Start with main focus
+			Events:            make([]*FileEvent, 0),
+			Filter:            Filter{ShowDirs: true, ShowFiles: true},
+			SortOption:        SortByTime,
+			MaxEvents:         1000,
+			AggregateEvents:   true,      // Enable aggregation by default
+			ShowDetails:       false,     // Details popup hidden by default
+			SelectedEvent:     nil,       // No event selected by default
+			ExportFilename:    "",        // No export filename by default
+			ImportFilename:    "",        // No import filename by default
+			ShowFileDialog:    false,     // File dialog hidden by default
+			ShowFolderManager: false,     // Folder manager hidden by default
+			CurrentFocus:      FocusMain, // Start with main focus
 			FileDialog: FileDialogState{
 				CurrentPath: ".",
 				Files:       make([]*FileEntry, 0),
 				SelectedIdx: 0,
 				Mode:        ModeSave,
 				Filter:      "*.db",
+			},
+			FolderManager: FolderManagerState{
+				CurrentPath: ".",
+				SelectedIdx: 0,
 			},
 		},
 		watcher:   watcher,
@@ -81,8 +88,16 @@ func NewUI(watcher interface {
 	ui.keybindings = NewKeybindings(ui)
 	ui.layout = NewLayout(ui)
 	ui.events = NewEvents(ui)
+	ui.folderManager = NewFolderManager(ui)
 
 	return ui
+}
+
+// ShouldIgnore checks if a path should be ignored
+func (ui *UI) ShouldIgnore(path string) bool {
+	// Use the same logic as in pkg/utils/utils.go
+	base := filepath.Base(path)
+	return base != "" && base[0] == '.'
 }
 
 // Run starts the TUI
@@ -244,6 +259,26 @@ func (ui *UI) ExportEvents(filename string, format ExportFormat) error {
 // ImportEvents imports events from a file
 func (ui *UI) ImportEvents(filename string, format ExportFormat) error {
 	return ui.exportImport.ImportEvents(filename, format)
+}
+
+// ShowFolderManager shows the folder manager interface
+func (ui *UI) ShowFolderManager() {
+	ui.folderManager.Show()
+}
+
+// HideFolderManager hides the folder manager interface
+func (ui *UI) HideFolderManager() {
+	ui.folderManager.Hide()
+}
+
+// IsFolderManagerVisible returns true if the folder manager is visible
+func (ui *UI) IsFolderManagerVisible() bool {
+	return ui.state.ShowFolderManager
+}
+
+// GetFolderManager returns the folder manager instance
+func (ui *UI) GetFolderManager() *FolderManager {
+	return ui.folderManager
 }
 
 // showFileDialog affiche le dialogue de fichiers et donne le focus

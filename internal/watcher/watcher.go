@@ -3,6 +3,7 @@ package watcher
 import (
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -10,7 +11,9 @@ import (
 // Watcher wraps fsnotify.Watcher with additional functionality
 type Watcher struct {
 	watcher *fsnotify.Watcher
-	roots   []string // Changed from single root to multiple roots
+	roots   []string        // Root directories being watched
+	watched map[string]bool // Track all watched directories for removal
+	mu      sync.RWMutex    // Protect concurrent access to roots and watched
 }
 
 // New creates a new file system watcher
@@ -22,7 +25,8 @@ func New(root string) (*Watcher, error) {
 
 	return &Watcher{
 		watcher: watcher,
-		roots:   []string{root}, // Initialize with single root for backward compatibility
+		roots:   []string{root},
+		watched: make(map[string]bool),
 	}, nil
 }
 
@@ -33,10 +37,18 @@ func NewMultiRoot(roots []string) (*Watcher, error) {
 		return nil, err
 	}
 
-	return &Watcher{
+	w := &Watcher{
 		watcher: watcher,
 		roots:   roots,
-	}, nil
+		watched: make(map[string]bool),
+	}
+
+	// Add all roots recursively
+	if err := w.AddAllRootsRecursive(); err != nil {
+		return nil, err
+	}
+
+	return w, nil
 }
 
 // Close closes the watcher
@@ -55,6 +67,9 @@ func (w *Watcher) AddRecursive(root string) error {
 			if err != nil {
 				return err
 			}
+			w.mu.Lock()
+			w.watched[path] = true
+			w.mu.Unlock()
 		}
 		return nil
 	})
@@ -82,16 +97,31 @@ func (w *Watcher) Errors() <-chan error {
 
 // AddDirectory adds a new directory to the watcher (for newly created directories)
 func (w *Watcher) AddDirectory(path string) error {
-	return w.watcher.Add(path)
+	err := w.watcher.Add(path)
+	if err == nil {
+		w.mu.Lock()
+		w.watched[path] = true
+		w.mu.Unlock()
+	}
+	return err
 }
 
 // GetRoots returns all root directories being watched
 func (w *Watcher) GetRoots() []string {
-	return w.roots
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	// Return a copy to avoid race conditions
+	roots := make([]string, len(w.roots))
+	copy(roots, w.roots)
+	return roots
 }
 
 // GetRoot returns the first root directory being watched (for backward compatibility)
 func (w *Watcher) GetRoot() string {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	if len(w.roots) > 0 {
 		return w.roots[0]
 	}
@@ -100,6 +130,16 @@ func (w *Watcher) GetRoot() string {
 
 // AddRoot adds a new root directory to watch
 func (w *Watcher) AddRoot(root string) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// Check if root is already being watched
+	for _, r := range w.roots {
+		if r == root {
+			return nil // Already watching this root
+		}
+	}
+
 	// Add the root to our list
 	w.roots = append(w.roots, root)
 
@@ -109,16 +149,81 @@ func (w *Watcher) AddRoot(root string) error {
 
 // RemoveRoot removes a root directory from watching
 func (w *Watcher) RemoveRoot(root string) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	// Find and remove the root from our list
+	rootIndex := -1
 	for i, r := range w.roots {
 		if r == root {
-			w.roots = append(w.roots[:i], w.roots[i+1:]...)
+			rootIndex = i
 			break
 		}
 	}
 
-	// Note: fsnotify doesn't support removing individual directories
-	// We would need to recreate the watcher to remove a directory
-	// For now, we'll just remove it from our list
+	if rootIndex == -1 {
+		return nil // Root not found, nothing to remove
+	}
+
+	// Remove from roots list
+	w.roots = append(w.roots[:rootIndex], w.roots[rootIndex+1:]...)
+
+	// Remove all subdirectories of this root from the watcher
+	// We need to recreate the watcher to properly remove directories
+	return w.recreateWatcherWithoutRoot(root)
+}
+
+// recreateWatcherWithoutRoot recreates the watcher without the specified root
+func (w *Watcher) recreateWatcherWithoutRoot(rootToRemove string) error {
+	// Store current watched directories
+	oldWatched := make(map[string]bool)
+	for path := range w.watched {
+		oldWatched[path] = true
+	}
+
+	// Close old watcher
+	w.watcher.Close()
+
+	// Create new watcher
+	newWatcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+
+	w.watcher = newWatcher
+	w.watched = make(map[string]bool)
+
+	// Re-add all roots except the one to remove
+	for _, root := range w.roots {
+		if root != rootToRemove {
+			if err := w.AddRecursive(root); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
+}
+
+// IsWatching returns true if the given path is being watched
+func (w *Watcher) IsWatching(path string) bool {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	// Check if it's a root directory
+	for _, root := range w.roots {
+		if root == path {
+			return true
+		}
+	}
+
+	// Check if it's a watched subdirectory
+	return w.watched[path]
+}
+
+// GetWatchedCount returns the number of directories being watched
+func (w *Watcher) GetWatchedCount() int {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	return len(w.watched)
 }

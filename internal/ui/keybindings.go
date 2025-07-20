@@ -94,6 +94,11 @@ func (kb *Keybindings) Setup(g *gocui.Gui) error {
 		return err
 	}
 
+	// Folder manager keybinding
+	if err := g.SetKeybinding("", gocui.KeyCtrlF, gocui.ModNone, kb.showFolderManager); err != nil {
+		return err
+	}
+
 	// Global escape key for closing popups
 	if err := g.SetKeybinding("", gocui.KeyEsc, gocui.ModNone, kb.debugEscape); err != nil {
 		return err
@@ -133,6 +138,35 @@ func (kb *Keybindings) Setup(g *gocui.Gui) error {
 		return err
 	}
 	if err := g.SetKeybinding(FileListView, 'e', gocui.ModNone, kb.fileDialogEditFilename); err != nil {
+		return err
+	}
+
+	// Folder manager keybindings
+	if err := g.SetKeybinding(FolderListView, gocui.KeyArrowUp, gocui.ModNone, kb.folderManagerUp); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(FolderListView, gocui.KeyArrowDown, gocui.ModNone, kb.folderManagerDown); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(FolderListView, 'k', gocui.ModNone, kb.folderManagerUp); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(FolderListView, 'j', gocui.ModNone, kb.folderManagerDown); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(FolderListView, gocui.KeyEnter, gocui.ModNone, kb.folderManagerEnter); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(FolderListView, gocui.KeyEsc, gocui.ModNone, kb.folderManagerCancel); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(FolderListView, 'q', gocui.ModNone, kb.folderManagerCancel); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(FolderListView, 'a', gocui.ModNone, kb.folderManagerAdd); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(FolderListView, 'd', gocui.ModNone, kb.folderManagerRemove); err != nil {
 		return err
 	}
 
@@ -249,6 +283,12 @@ func (kb *Keybindings) importEventsHandler(g *gocui.Gui, v *gocui.View) error {
 	return nil
 }
 
+// Folder manager keybinding
+func (kb *Keybindings) showFolderManager(g *gocui.Gui, v *gocui.View) error {
+	kb.ui.ShowFolderManager()
+	return nil
+}
+
 // File dialog functions
 func (kb *Keybindings) fileDialogUp(g *gocui.Gui, v *gocui.View) error {
 	return kb.ui.fileDialog.Up(g, v)
@@ -270,6 +310,31 @@ func (kb *Keybindings) fileDialogCancel(g *gocui.Gui, v *gocui.View) error {
 	return kb.ui.fileDialog.Cancel(g, v)
 }
 
+// Folder manager keybindings
+func (kb *Keybindings) folderManagerUp(g *gocui.Gui, v *gocui.View) error {
+	return kb.ui.folderManager.Up(g, v)
+}
+
+func (kb *Keybindings) folderManagerDown(g *gocui.Gui, v *gocui.View) error {
+	return kb.ui.folderManager.Down(g, v)
+}
+
+func (kb *Keybindings) folderManagerEnter(g *gocui.Gui, v *gocui.View) error {
+	return kb.ui.folderManager.Enter(g, v)
+}
+
+func (kb *Keybindings) folderManagerCancel(g *gocui.Gui, v *gocui.View) error {
+	return kb.ui.folderManager.Cancel(g, v)
+}
+
+func (kb *Keybindings) folderManagerAdd(g *gocui.Gui, v *gocui.View) error {
+	return kb.ui.folderManager.Add(g, v)
+}
+
+func (kb *Keybindings) folderManagerRemove(g *gocui.Gui, v *gocui.View) error {
+	return kb.ui.folderManager.Remove(g, v)
+}
+
 // Utility functions
 func (kb *Keybindings) quit(g *gocui.Gui, v *gocui.View) error {
 	return gocui.ErrQuit
@@ -281,10 +346,13 @@ func (kb *Keybindings) debugKeyPress(g *gocui.Gui, v *gocui.View) error {
 }
 
 func (kb *Keybindings) debugEscape(g *gocui.Gui, v *gocui.View) error {
-	// Debug function - can be used to test if escape key is working
-	// For now, just close details if they are open
+	// Handle escape key based on current focus
 	if kb.ui.state.ShowDetails {
 		return kb.hideEventDetails(g, v)
+	} else if kb.ui.state.ShowFileDialog {
+		return kb.fileDialogCancel(g, v)
+	} else if kb.ui.state.ShowFolderManager {
+		return kb.folderManagerCancel(g, v)
 	}
 	return nil
 }

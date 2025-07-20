@@ -111,6 +111,11 @@ func (l *Layout) layoutOverlayViews(g *gocui.Gui, maxX, maxY int) error {
 		return err
 	}
 
+	// Layout folder manager
+	if err := l.layoutFolderManager(g, maxX, maxY); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -248,10 +253,105 @@ func (l *Layout) layoutFileDialog(g *gocui.Gui, maxX, maxY int) error {
 	return nil
 }
 
+// layoutFolderManager creates the folder manager overlay
+func (l *Layout) layoutFolderManager(g *gocui.Gui, maxX, maxY int) error {
+	if l.ui.state.ShowFolderManager {
+		// Calculate popup size and position (centered, large for folder manager)
+		popupWidth := 100
+		popupHeight := 25
+		x0 := (maxX - popupWidth) / 2
+		y0 := (maxY - popupHeight) / 2
+		x1 := x0 + popupWidth
+		y1 := y0 + popupHeight
+
+		// Main dialog frame
+		if v, err := g.SetView(FolderManagerView, x0, y0, x1, y1, 0); err != nil {
+			if !isUnknownViewError(err) {
+				return err
+			}
+			v.Title = " Folder Manager "
+			v.Frame = true
+			v.BgColor = gocui.ColorBlack
+			v.FgColor = gocui.ColorWhite
+			l.ui.folderManager.UpdateMainView(v)
+		} else {
+			l.ui.folderManager.UpdateMainView(v)
+		}
+
+		// Split the dialog into two sections
+		splitX := x0 + (x1-x0)/2
+
+		// Left side: Currently watched folders
+		leftY0 := y0 + 1
+		leftY1 := y1 - 1
+		if v, err := g.SetView("watched_folders", x0+1, leftY0, splitX-1, leftY1, 0); err != nil {
+			if !isUnknownViewError(err) {
+				return err
+			}
+			v.Frame = true
+			v.Title = " Currently Watching "
+			v.BgColor = gocui.ColorBlack
+			v.FgColor = gocui.ColorWhite
+			v.Highlight = true
+			v.SelBgColor = gocui.Attribute(tcell.ColorDarkGreen)
+			v.SelFgColor = gocui.ColorBlack
+		}
+
+		// Right side: Folder browser
+		rightY0 := y0 + 1
+		rightY1 := y1 - 1
+		if v, err := g.SetView(FolderListView, splitX+1, rightY0, x1-1, rightY1, 0); err != nil {
+			if !isUnknownViewError(err) {
+				return err
+			}
+			v.Frame = true
+			v.Title = " Available Folders "
+			v.BgColor = gocui.ColorBlack
+			v.FgColor = gocui.ColorWhite
+			v.Highlight = true
+			v.SelBgColor = gocui.Attribute(tcell.ColorDarkGreen)
+			v.SelFgColor = gocui.ColorBlack
+			l.ui.folderManager.UpdateFolderListView(v)
+		} else {
+			l.ui.folderManager.UpdateFolderListView(v)
+		}
+
+		// Path display (top of right side)
+		pathHeight := 3
+		if v, err := g.SetView("folder_path", splitX+1, rightY0, x1-1, rightY0+pathHeight, 0); err != nil {
+			if !isUnknownViewError(err) {
+				return err
+			}
+			v.Frame = false
+			v.BgColor = gocui.ColorBlack
+			v.FgColor = gocui.ColorCyan
+			l.ui.folderManager.UpdatePathView(v)
+		} else {
+			l.ui.folderManager.UpdatePathView(v)
+		}
+
+	} else {
+		// Remove folder manager views if not needed
+		if err := g.DeleteView(FolderManagerView); err != nil {
+			logger.Error(err, "DeleteView error")
+		}
+		if err := g.DeleteView(FolderListView); err != nil {
+			logger.Error(err, "DeleteView error")
+		}
+		if err := g.DeleteView("watched_folders"); err != nil {
+			logger.Error(err, "DeleteView error")
+		}
+		if err := g.DeleteView("folder_path"); err != nil {
+			logger.Error(err, "DeleteView error")
+		}
+	}
+	return nil
+}
+
 // setFocus sets the current focus based on the UI state
 func (l *Layout) setFocus(g *gocui.Gui) error {
 	// Set EventsView as the default active view (unless dialogs are shown)
-	if !l.ui.state.ShowDetails && !l.ui.state.ShowFileDialog {
+	if !l.ui.state.ShowDetails && !l.ui.state.ShowFileDialog && !l.ui.state.ShowFolderManager {
 		if _, err := g.SetCurrentView(EventsView); err != nil {
 			return err
 		}
@@ -268,6 +368,10 @@ func (l *Layout) setFocus(g *gocui.Gui) error {
 			if _, err := g.SetCurrentView(FileListView); err != nil {
 				return err
 			}
+		}
+	} else if l.ui.state.ShowFolderManager {
+		if _, err := g.SetCurrentView(FolderListView); err != nil {
+			return err
 		}
 	}
 

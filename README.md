@@ -13,6 +13,7 @@ A Go file watcher utility that recursively monitors a directory and its subdirec
 
 - **Beautiful TUI Interface**: Modern terminal user interface with multiple views
 - **Multiple Directory Monitoring**: Watch multiple directories simultaneously with the new `-paths` flag
+- **Dynamic Folder Management**: Add/remove directories in real-time via TUI with Ctrl+F
 - **Real-time Event Display**: Live updates with color-coded events
 - **Recursive Directory Monitoring**: Automatically watches new subdirectories
 - **Advanced Filtering**: Filter by file type, path, and operation
@@ -214,6 +215,59 @@ SELECT * FROM events WHERE path LIKE '%config%';
 ```
 
 For detailed information, see [docs/IMPORT_EXPORT_FEATURE.md](docs/IMPORT_EXPORT_FEATURE.md).
+
+## Dynamic Folder Management
+
+watch-fs now supports dynamic folder management through the TUI interface, allowing you to add or remove directories from monitoring without restarting the application.
+
+### Accessing the Folder Manager
+
+- **Ctrl+F**: Open the folder manager interface
+
+### Interface Overview
+
+The folder manager displays two panels:
+
+#### Left Panel: Currently Watching
+
+- List of currently monitored directories
+- Total count of watched directories
+- Total count of watched subdirectories
+
+#### Right Panel: Folder Browser
+
+- Navigate through the directory tree
+- Current path display
+- Directories already being watched are marked with `[WATCHING]`
+
+### Keyboard Shortcuts
+
+In the folder manager:
+
+- **↑/↓ or k/j**: Navigate through the folder list
+- **Enter**: Open the selected directory
+- **a**: Add the selected directory to monitoring
+- **d**: Remove the selected directory from monitoring
+- **ESC or q**: Close the folder manager
+
+### Usage Examples
+
+```bash
+# Start with a single directory
+./watch-fs -path "./src"
+
+# Then use Ctrl+F to add more directories:
+# - Navigate to ./tests and press 'a'
+# - Navigate to ./docs and press 'a'
+# - Result: monitoring ./src, ./tests, ./docs
+```
+
+### Benefits
+
+- **Real-time Changes**: Add/remove directories without restarting
+- **Visual Feedback**: See which directories are being watched
+- **Easy Navigation**: Browse the file system to find directories
+- **Thread-safe**: Concurrent modifications are handled safely
 
 ## Sort Options
 
