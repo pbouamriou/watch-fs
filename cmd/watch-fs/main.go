@@ -105,7 +105,11 @@ func main() {
 		logger.Error(err, "Failed to add recursive watching")
 		os.Exit(1)
 	}
-	defer func() { _ = fileWatcher.Close() }()
+	defer func() {
+		if err := fileWatcher.Close(); err != nil {
+			logger.Error(err, "Failed to close watcher")
+		}
+	}()
 
 	// Get the primary root path for UI (first one for backward compatibility)
 	primaryRootPath := rootPaths[0]

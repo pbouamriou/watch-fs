@@ -3,6 +3,8 @@ package watcher
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
@@ -272,7 +274,13 @@ func (w *Watcher) GetWatchedCountForRoot(root string) int {
 		// Use filepath.Rel to check if watchedPath is under root
 		if rel, err := filepath.Rel(resolvedRoot, resolvedWatched); err == nil && !filepath.IsAbs(rel) && rel != ".." {
 			// Check if it doesn't start with "../" (which means it's not under the root)
-			if len(rel) < 3 || rel[:3] != "../" {
+			// Handle both Unix and Windows path separators
+			parentDir := ".." + string(filepath.Separator)
+			if runtime.GOOS == "windows" {
+				// On Windows, also handle forward slashes that might be in the relative path
+				rel = strings.ReplaceAll(rel, "/", string(filepath.Separator))
+			}
+			if len(rel) < len(parentDir) || !strings.HasPrefix(rel, parentDir) {
 				count++
 			}
 		}
