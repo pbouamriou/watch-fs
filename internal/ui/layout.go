@@ -143,7 +143,7 @@ func (l *Layout) layoutDetailsPopup(g *gocui.Gui, maxX, maxY int) error {
 	} else {
 		// Remove details view if not needed
 		if err := g.DeleteView(DetailsView); err != nil {
-			logger.Error(err, "DeleteView error")
+			logger.Error(err, "Failed to delete details view during layout cleanup")
 		}
 	}
 	return nil
@@ -238,16 +238,16 @@ func (l *Layout) layoutFileDialog(g *gocui.Gui, maxX, maxY int) error {
 	} else {
 		// Remove file dialog views if not needed
 		if err := g.DeleteView(FileDialogView); err != nil {
-			logger.Error(err, "DeleteView error")
+			logger.Error(err, "Failed to delete file dialog view")
 		}
 		if err := g.DeleteView(FilenameView); err != nil {
-			logger.Error(err, "DeleteView error")
+			logger.Error(err, "Failed to delete filename input view")
 		}
 		if err := g.DeleteView(PathView); err != nil {
-			logger.Error(err, "DeleteView error")
+			logger.Error(err, "Failed to delete path display view")
 		}
 		if err := g.DeleteView(FileListView); err != nil {
-			logger.Error(err, "DeleteView error")
+			logger.Error(err, "Failed to delete file list view")
 		}
 	}
 	return nil
@@ -378,16 +378,16 @@ func (l *Layout) layoutFolderManager(g *gocui.Gui, maxX, maxY int) error {
 	} else {
 		// Remove folder manager views if not needed
 		if err := g.DeleteView(FolderManagerView); err != nil {
-			logger.Error(err, "DeleteView error")
+			logger.Error(err, "Failed to delete folder manager main view")
 		}
 		if err := g.DeleteView(FolderListView); err != nil {
-			logger.Error(err, "DeleteView error")
+			logger.Error(err, "Failed to delete folder browser view")
 		}
 		if err := g.DeleteView("watched_folders"); err != nil {
-			logger.Error(err, "DeleteView error")
+			logger.Error(err, "Failed to delete watched folders view")
 		}
 		if err := g.DeleteView("folder_path"); err != nil {
-			logger.Error(err, "DeleteView error")
+			logger.Error(err, "Failed to delete folder path view")
 		}
 	}
 	return nil

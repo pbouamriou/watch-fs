@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/pbouamriou/watch-fs/pkg/logger"
 )
 
 // Watcher wraps fsnotify.Watcher with additional functionality
@@ -190,7 +191,9 @@ func (w *Watcher) recreateWatcherWithoutRoot(rootToRemove string) error {
 	}
 
 	// Close old watcher
-	_ = w.watcher.Close()
+	if err := w.watcher.Close(); err != nil {
+		logger.Error(err, "Failed to close watcher during recreation")
+	}
 
 	// Create new watcher
 	newWatcher, err := fsnotify.NewWatcher()
@@ -255,8 +258,19 @@ func (w *Watcher) GetWatchedCountForRoot(root string) int {
 		}
 
 		// Check if the watched path is under this root
+		// Resolve symlinks for accurate comparison
+		resolvedRoot, err := filepath.EvalSymlinks(cleanRoot)
+		if err != nil {
+			resolvedRoot = cleanRoot
+		}
+
+		resolvedWatched, err := filepath.EvalSymlinks(cleanWatched)
+		if err != nil {
+			resolvedWatched = cleanWatched
+		}
+
 		// Use filepath.Rel to check if watchedPath is under root
-		if rel, err := filepath.Rel(cleanRoot, cleanWatched); err == nil && !filepath.IsAbs(rel) && rel != ".." {
+		if rel, err := filepath.Rel(resolvedRoot, resolvedWatched); err == nil && !filepath.IsAbs(rel) && rel != ".." {
 			// Check if it doesn't start with "../" (which means it's not under the root)
 			if len(rel) < 3 || rel[:3] != "../" {
 				count++
