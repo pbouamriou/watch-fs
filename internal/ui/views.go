@@ -37,8 +37,14 @@ func (v *Views) UpdateStatusView(view *gocui.View) {
 		exportInfo = fmt.Sprintf(" | Export: %s", green("JSON available"))
 	}
 
+	// Display watched directories
+	watchingInfo := v.ui.GetRootPathsDisplay()
+	if len(v.ui.rootPaths) > 1 {
+		watchingInfo = fmt.Sprintf("%s (%d dirs)", watchingInfo, len(v.ui.rootPaths))
+	}
+
 	_, _ = fmt.Fprintf(view, "Watching: %s | Events: %s | Sort: %s%s\n",
-		cyan(v.ui.rootPath),
+		cyan(watchingInfo),
 		yellow(len(v.ui.state.Events)),
 		cyan(v.ui.getSortOptionName()),
 		exportInfo)
@@ -103,7 +109,7 @@ func (v *Views) UpdateHelpView(view *gocui.View) {
 
 	switch v.ui.state.CurrentFocus {
 	case FocusMain:
-		helpText = "q: Quit | f: Toggle files | d: Toggle dirs | a: Toggle aggregate | s: Sort | ↑↓←→/hjkl: Navigate | PgUp/PgDn: Page | Home/End/g/G: Top/Bottom | Enter: Details | Ctrl+E: Export | Ctrl+I: Import"
+		helpText = "q: Quit | f: Toggle files | d: Toggle dirs | a: Toggle aggregate | s: Sort | ↑↓←→/hjkl: Navigate | PgUp/PgDn: Page | Home/End/g/G: Top/Bottom | Enter: Details | Ctrl+E: Export | Ctrl+I: Import | Ctrl+F: Folder Manager"
 
 	case FocusDetails:
 		helpText = "ESC/q: Close details | Enter: Close details"
@@ -115,8 +121,11 @@ func (v *Views) UpdateHelpView(view *gocui.View) {
 			helpText = "↑↓/kj: Navigate | Enter: Select file | ESC/q: Cancel | Open mode"
 		}
 
+	case FocusFolderManager:
+		helpText = "↑↓/kj: Navigate | Enter: Open folder | a: Add folder | d: Remove folder | ESC/q: Close | Folder Manager"
+
 	default:
-		helpText = "q: Quit | Navigation: ↑↓←→/hjkl | Enter: Details | Ctrl+E: Export | Ctrl+I: Import"
+		helpText = "q: Quit | Navigation: ↑↓←→/hjkl | Enter: Details | Ctrl+E: Export | Ctrl+I: Import | Ctrl+F: Folder Manager"
 	}
 
 	_, _ = fmt.Fprint(view, helpText)

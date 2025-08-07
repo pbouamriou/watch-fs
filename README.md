@@ -12,6 +12,8 @@ A Go file watcher utility that recursively monitors a directory and its subdirec
 ## Features
 
 - **Beautiful TUI Interface**: Modern terminal user interface with multiple views
+- **Multiple Directory Monitoring**: Watch multiple directories simultaneously with the new `-paths` flag
+- **Dynamic Folder Management**: Add/remove directories in real-time via TUI with Ctrl+F
 - **Real-time Event Display**: Live updates with color-coded events
 - **Recursive Directory Monitoring**: Automatically watches new subdirectories
 - **Advanced Filtering**: Filter by file type, path, and operation
@@ -22,6 +24,7 @@ A Go file watcher utility that recursively monitors a directory and its subdirec
 - **Import/Export Functionality**: Save and load events in SQLite or JSON format
 - **Context-Aware Focus System**: Intelligent input handling with context-sensitive help
 - **Robust Error Handling**: Graceful error handling and recovery
+- **Backward Compatibility**: Original `-path` flag still supported
 
 ## Screenshots
 
@@ -68,28 +71,54 @@ go install github.com/pbouamriou/watch-fs/cmd/watch-fs@latest
 
 ### Usage
 
-#### TUI Mode (Default)
+#### Single Directory (Original)
 
 ```bash
 watch-fs -path /path/to/directory
+```
+
+#### Multiple Directories (New)
+
+```bash
+# Surveiller plusieurs dossiers
+watch-fs -paths "/path/to/dir1,/path/to/dir2,/path/to/dir3"
+
+# Avec des chemins relatifs
+watch-fs -paths "./src,./tests,./docs"
+
+# Avec des espaces (automatiquement supprimés)
+watch-fs -paths "/path/to/dir1, /path/to/dir2"
 ```
 
 #### Console Mode (Simple Output)
 
 ```bash
 watch-fs -path /path/to/directory -tui=false
+# ou
+watch-fs -paths "/dir1,/dir2" -tui=false
 ```
 
-#### Example
+#### Examples
 
 ```bash
+# Surveillance d'un projet
 watch-fs -path ./my-project
+
+# Surveillance de plusieurs dossiers de développement
+watch-fs -paths "./frontend/src,./backend/src,./shared"
+
+# Surveillance de dossiers système
+watch-fs -paths "/var/log,/tmp,/home/user/documents"
 ```
+
+> **Note**: Le flag `-path` reste supporté pour la compatibilité. Le nouveau flag `-paths` permet de surveiller plusieurs dossiers simultanément.
 
 ## Options
 
-- `-path` : The directory to watch (required)
+- `-path` : The directory to watch (deprecated, use -paths instead)
+- `-paths` : Comma-separated list of directories to watch
 - `-tui` : Use terminal user interface (default: true)
+- `-version` : Show version information
 
 ## TUI Controls
 
@@ -186,6 +215,59 @@ SELECT * FROM events WHERE path LIKE '%config%';
 ```
 
 For detailed information, see [docs/IMPORT_EXPORT_FEATURE.md](docs/IMPORT_EXPORT_FEATURE.md).
+
+## Dynamic Folder Management
+
+watch-fs now supports dynamic folder management through the TUI interface, allowing you to add or remove directories from monitoring without restarting the application.
+
+### Accessing the Folder Manager
+
+- **Ctrl+F**: Open the folder manager interface
+
+### Interface Overview
+
+The folder manager displays two panels:
+
+#### Left Panel: Currently Watching
+
+- List of currently monitored directories
+- Total count of watched directories
+- Total count of watched subdirectories
+
+#### Right Panel: Folder Browser
+
+- Navigate through the directory tree
+- Current path display
+- Directories already being watched are marked with `[WATCHING]`
+
+### Keyboard Shortcuts
+
+In the folder manager:
+
+- **↑/↓ or k/j**: Navigate through the folder list
+- **Enter**: Open the selected directory
+- **a**: Add the selected directory to monitoring
+- **d**: Remove the selected directory from monitoring
+- **ESC or q**: Close the folder manager
+
+### Usage Examples
+
+```bash
+# Start with a single directory
+./watch-fs -path "./src"
+
+# Then use Ctrl+F to add more directories:
+# - Navigate to ./tests and press 'a'
+# - Navigate to ./docs and press 'a'
+# - Result: monitoring ./src, ./tests, ./docs
+```
+
+### Benefits
+
+- **Real-time Changes**: Add/remove directories without restarting
+- **Visual Feedback**: See which directories are being watched
+- **Easy Navigation**: Browse the file system to find directories
+- **Thread-safe**: Concurrent modifications are handled safely
 
 ## Sort Options
 
@@ -305,6 +387,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
 ## Architecture
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture information.
+
+## Multiple Directory Monitoring
+
+For detailed information about the multiple directory monitoring feature, see [docs/MULTIPLE_FOLDERS.md](docs/MULTIPLE_FOLDERS.md).
 
 ## License
 

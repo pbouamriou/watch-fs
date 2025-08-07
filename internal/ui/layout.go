@@ -111,6 +111,11 @@ func (l *Layout) layoutOverlayViews(g *gocui.Gui, maxX, maxY int) error {
 		return err
 	}
 
+	// Layout folder manager
+	if err := l.layoutFolderManager(g, maxX, maxY); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -138,7 +143,7 @@ func (l *Layout) layoutDetailsPopup(g *gocui.Gui, maxX, maxY int) error {
 	} else {
 		// Remove details view if not needed
 		if err := g.DeleteView(DetailsView); err != nil {
-			logger.Error(err, "DeleteView error")
+			logger.Error(err, "Failed to delete details view during layout cleanup")
 		}
 	}
 	return nil
@@ -233,16 +238,156 @@ func (l *Layout) layoutFileDialog(g *gocui.Gui, maxX, maxY int) error {
 	} else {
 		// Remove file dialog views if not needed
 		if err := g.DeleteView(FileDialogView); err != nil {
-			logger.Error(err, "DeleteView error")
+			logger.Error(err, "Failed to delete file dialog view")
 		}
 		if err := g.DeleteView(FilenameView); err != nil {
-			logger.Error(err, "DeleteView error")
+			logger.Error(err, "Failed to delete filename input view")
 		}
 		if err := g.DeleteView(PathView); err != nil {
-			logger.Error(err, "DeleteView error")
+			logger.Error(err, "Failed to delete path display view")
 		}
 		if err := g.DeleteView(FileListView); err != nil {
-			logger.Error(err, "DeleteView error")
+			logger.Error(err, "Failed to delete file list view")
+		}
+	}
+	return nil
+}
+
+// layoutFolderManager creates the folder manager overlay
+func (l *Layout) layoutFolderManager(g *gocui.Gui, maxX, maxY int) error {
+	if l.ui.state.ShowFolderManager {
+		// Calculate popup size and position (centered, large for folder manager)
+		popupWidth := 100
+		popupHeight := 25
+		x0 := (maxX - popupWidth) / 2
+		y0 := (maxY - popupHeight) / 2
+		x1 := x0 + popupWidth
+		y1 := y0 + popupHeight
+
+		// Main dialog frame
+		if v, err := g.SetView(FolderManagerView, x0, y0, x1, y1, 0); err != nil {
+			if !isUnknownViewError(err) {
+				return err
+			}
+			v.Title = " Folder Manager "
+			v.Frame = true
+			v.BgColor = gocui.ColorBlack
+			v.FgColor = gocui.ColorWhite
+			l.ui.folderManager.UpdateMainView(v)
+		} else {
+			l.ui.folderManager.UpdateMainView(v)
+		}
+
+		// Split the dialog into two sections
+		splitX := x0 + (x1-x0)/2
+
+		// Left side: Currently watched folders
+		leftY0 := y0 + 1
+		leftY1 := y1 - 1
+		if v, err := g.SetView("watched_folders", x0+1, leftY0, splitX-1, leftY1, 0); err != nil {
+			if !isUnknownViewError(err) {
+				return err
+			}
+			v.Frame = true
+			v.BgColor = gocui.ColorBlack
+			v.FgColor = gocui.ColorWhite
+			v.Highlight = true
+			v.SelBgColor = gocui.Attribute(tcell.ColorDarkGreen)
+			v.SelFgColor = gocui.ColorBlack
+
+			// Set title and frame color with focus indication
+			if l.ui.state.FolderManager.ActivePanel == FocusWatchedFolders {
+				v.Title = " Currently Watching "
+				v.TitleColor = gocui.ColorCyan
+				v.FrameColor = gocui.ColorCyan
+			} else {
+				v.Title = " Currently Watching "
+				v.TitleColor = gocui.ColorWhite
+				v.FrameColor = gocui.ColorWhite
+			}
+
+			l.ui.folderManager.UpdateWatchedFoldersView(v)
+		} else {
+			// Update title and frame color based on focus
+			if l.ui.state.FolderManager.ActivePanel == FocusWatchedFolders {
+				v.Title = " Currently Watching "
+				v.TitleColor = gocui.ColorCyan
+				v.FrameColor = gocui.ColorCyan
+			} else {
+				v.Title = " Currently Watching "
+				v.TitleColor = gocui.ColorWhite
+				v.FrameColor = gocui.ColorWhite
+			}
+			l.ui.folderManager.UpdateWatchedFoldersView(v)
+		}
+
+		// Right side: Folder browser
+		rightY0 := y0 + 1
+		rightY1 := y1 - 1
+		if v, err := g.SetView(FolderListView, splitX+1, rightY0, x1-1, rightY1, 0); err != nil {
+			if !isUnknownViewError(err) {
+				return err
+			}
+			v.Frame = true
+			v.BgColor = gocui.ColorBlack
+			v.FgColor = gocui.ColorWhite
+			v.Highlight = true
+			v.SelBgColor = gocui.Attribute(tcell.ColorDarkGreen)
+			v.SelFgColor = gocui.ColorBlack
+
+			// Set title and frame color with focus indication
+			if l.ui.state.FolderManager.ActivePanel == FocusFolderBrowser {
+				v.Title = " Available Folders "
+				v.TitleColor = gocui.ColorCyan
+				v.FrameColor = gocui.ColorCyan
+			} else {
+				v.Title = " Available Folders "
+				v.TitleColor = gocui.ColorWhite
+				v.FrameColor = gocui.ColorWhite
+			}
+
+			l.ui.folderManager.UpdateFolderListView(v)
+		} else {
+			// Update title and frame color based on focus
+			if l.ui.state.FolderManager.ActivePanel == FocusFolderBrowser {
+				v.Title = " Available Folders "
+				v.TitleColor = gocui.ColorCyan
+				v.FrameColor = gocui.ColorCyan
+			} else {
+				v.Title = " Available Folders "
+				v.TitleColor = gocui.ColorWhite
+				v.FrameColor = gocui.ColorWhite
+			}
+			l.ui.folderManager.UpdateFolderListView(v)
+		}
+
+		// Path display (top of right side)
+		pathHeight := 3
+		if v, err := g.SetView("folder_path", splitX+1, rightY0, x1-1, rightY0+pathHeight, 0); err != nil {
+			if !isUnknownViewError(err) {
+				return err
+			}
+			v.Frame = false
+			v.BgColor = gocui.ColorBlack
+			v.FgColor = gocui.ColorCyan
+			l.ui.folderManager.UpdatePathView(v)
+		} else {
+			l.ui.folderManager.UpdatePathView(v)
+		}
+
+	} else {
+		// Remove folder manager views if not needed
+		if err := g.DeleteView(FolderManagerView); err != nil {
+			logger.Error(err, "Failed to delete folder manager main view")
+		}
+		if err := g.DeleteView(FolderListView); err != nil {
+			logger.Error(err, "Failed to delete folder browser view")
+		}
+		if err := g.DeleteView("watched_folders"); err != nil {
+			logger.Error(err, "Failed to delete watched folders view")
+		}
+		if err := g.DeleteView("folder_path"); err != nil {
+			logger.Error(err, "Failed to delete folder path view")
 		}
 	}
 	return nil
@@ -251,7 +396,7 @@ func (l *Layout) layoutFileDialog(g *gocui.Gui, maxX, maxY int) error {
 // setFocus sets the current focus based on the UI state
 func (l *Layout) setFocus(g *gocui.Gui) error {
 	// Set EventsView as the default active view (unless dialogs are shown)
-	if !l.ui.state.ShowDetails && !l.ui.state.ShowFileDialog {
+	if !l.ui.state.ShowDetails && !l.ui.state.ShowFileDialog && !l.ui.state.ShowFolderManager {
 		if _, err := g.SetCurrentView(EventsView); err != nil {
 			return err
 		}
@@ -266,6 +411,23 @@ func (l *Layout) setFocus(g *gocui.Gui) error {
 			}
 		} else {
 			if _, err := g.SetCurrentView(FileListView); err != nil {
+				return err
+			}
+		}
+	} else if l.ui.state.ShowFolderManager {
+		// Set focus based on the active panel in folder manager
+		switch l.ui.state.FolderManager.ActivePanel {
+		case FocusWatchedFolders:
+			if _, err := g.SetCurrentView("watched_folders"); err != nil {
+				return err
+			}
+		case FocusFolderBrowser:
+			if _, err := g.SetCurrentView(FolderListView); err != nil {
+				return err
+			}
+		default:
+			// Default to watched folders panel
+			if _, err := g.SetCurrentView("watched_folders"); err != nil {
 				return err
 			}
 		}

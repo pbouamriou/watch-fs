@@ -3,30 +3,45 @@ package ui
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/jesseduffield/gocui"
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// getAbsolutePath converts a relative path to absolute path, with fallback
+func getAbsolutePath(path string) string {
+	if absPath, err := filepath.Abs(path); err == nil {
+		return absPath
+	}
+	// Fallback to original path if conversion fails
+	return path
+}
+
 // UI represents the terminal user interface
 type UI struct {
-	gui          *gocui.Gui
-	state        *UIState
-	fileDialog   *FileDialog
-	exportImport *ExportImport
-	navigation   *Navigation
-	views        *Views
-	keybindings  *Keybindings
-	layout       *Layout
-	events       *Events
+	gui           *gocui.Gui
+	state         *UIState
+	fileDialog    *FileDialog
+	exportImport  *ExportImport
+	navigation    *Navigation
+	views         *Views
+	keybindings   *Keybindings
+	layout        *Layout
+	events        *Events
+	folderManager *FolderManager
 
 	watcher interface {
 		Events() <-chan fsnotify.Event
 		Errors() <-chan error
 		AddDirectory(path string) error
+		GetRoots() []string
+		GetRoot() string
 	}
-	rootPath string
+	rootPath  string   // Primary root path for backward compatibility
+	rootPaths []string // All root paths being watched
 }
 
 // NewUI creates a new UI instance
@@ -34,30 +49,49 @@ func NewUI(watcher interface {
 	Events() <-chan fsnotify.Event
 	Errors() <-chan error
 	AddDirectory(path string) error
+	GetRoots() []string
+	GetRoot() string
 }, rootPath string) *UI {
+	// Get all root paths from the watcher
+	var rootPaths []string
+	if multiRootWatcher, ok := watcher.(interface{ GetRoots() []string }); ok {
+		rootPaths = multiRootWatcher.GetRoots()
+	} else {
+		rootPaths = []string{rootPath}
+	}
+
 	ui := &UI{
 		state: &UIState{
-			Events:          make([]*FileEvent, 0),
-			Filter:          Filter{ShowDirs: true, ShowFiles: true},
-			SortOption:      SortByTime,
-			MaxEvents:       1000,
-			AggregateEvents: true,      // Enable aggregation by default
-			ShowDetails:     false,     // Details popup hidden by default
-			SelectedEvent:   nil,       // No event selected by default
-			ExportFilename:  "",        // No export filename by default
-			ImportFilename:  "",        // No import filename by default
-			ShowFileDialog:  false,     // File dialog hidden by default
-			CurrentFocus:    FocusMain, // Start with main focus
+			Events:            make([]*FileEvent, 0),
+			Filter:            Filter{ShowDirs: true, ShowFiles: true},
+			SortOption:        SortByTime,
+			MaxEvents:         1000,
+			AggregateEvents:   true,      // Enable aggregation by default
+			ShowDetails:       false,     // Details popup hidden by default
+			SelectedEvent:     nil,       // No event selected by default
+			ExportFilename:    "",        // No export filename by default
+			ImportFilename:    "",        // No import filename by default
+			ShowFileDialog:    false,     // File dialog hidden by default
+			ShowFolderManager: false,     // Folder manager hidden by default
+			CurrentFocus:      FocusMain, // Start with main focus
 			FileDialog: FileDialogState{
-				CurrentPath: ".",
+				CurrentPath: getAbsolutePath("."),
 				Files:       make([]*FileEntry, 0),
 				SelectedIdx: 0,
 				Mode:        ModeSave,
 				Filter:      "*.db",
 			},
+			FolderManager: FolderManagerState{
+				CurrentPath:  getAbsolutePath("."),
+				SelectedIdx:  0,
+				WatchedIdx:   0,
+				ScrollOffset: 0,
+				ActivePanel:  FocusWatchedFolders, // Start with "Currently Watching" panel focused
+			},
 		},
-		watcher:  watcher,
-		rootPath: rootPath,
+		watcher:   watcher,
+		rootPath:  rootPath,
+		rootPaths: rootPaths,
 	}
 	ui.fileDialog = NewFileDialog(ui)
 	ui.exportImport = NewExportImport(ui)
@@ -66,8 +100,16 @@ func NewUI(watcher interface {
 	ui.keybindings = NewKeybindings(ui)
 	ui.layout = NewLayout(ui)
 	ui.events = NewEvents(ui)
+	ui.folderManager = NewFolderManager(ui)
 
 	return ui
+}
+
+// ShouldIgnore checks if a path should be ignored
+func (ui *UI) ShouldIgnore(path string) bool {
+	// Use the same logic as in pkg/utils/utils.go
+	base := filepath.Base(path)
+	return base != "" && base[0] == '.'
 }
 
 // Run starts the TUI
@@ -129,6 +171,26 @@ func (ui *UI) GetState() *UIState {
 // GetRootPath returns the root path being watched
 func (ui *UI) GetRootPath() string {
 	return ui.rootPath
+}
+
+// GetRootPaths returns all root paths being watched
+func (ui *UI) GetRootPaths() []string {
+	return ui.rootPaths
+}
+
+// GetRootPathsDisplay returns a formatted string of all root paths for display
+func (ui *UI) GetRootPathsDisplay() string {
+	if len(ui.rootPaths) == 1 {
+		return ui.rootPaths[0]
+	}
+
+	// For multiple paths, show them in a compact format
+	if len(ui.rootPaths) <= 3 {
+		return strings.Join(ui.rootPaths, ", ")
+	}
+
+	// For more than 3 paths, show first 2 and count of remaining
+	return fmt.Sprintf("%s, %s, +%d more", ui.rootPaths[0], ui.rootPaths[1], len(ui.rootPaths)-2)
 }
 
 // AddEvent adds an event (public version for testing)
@@ -209,6 +271,26 @@ func (ui *UI) ExportEvents(filename string, format ExportFormat) error {
 // ImportEvents imports events from a file
 func (ui *UI) ImportEvents(filename string, format ExportFormat) error {
 	return ui.exportImport.ImportEvents(filename, format)
+}
+
+// ShowFolderManager shows the folder manager interface
+func (ui *UI) ShowFolderManager() {
+	ui.folderManager.Show()
+}
+
+// HideFolderManager hides the folder manager interface
+func (ui *UI) HideFolderManager() {
+	ui.folderManager.Hide()
+}
+
+// IsFolderManagerVisible returns true if the folder manager is visible
+func (ui *UI) IsFolderManagerVisible() bool {
+	return ui.state.ShowFolderManager
+}
+
+// GetFolderManager returns the folder manager instance
+func (ui *UI) GetFolderManager() *FolderManager {
+	return ui.folderManager
 }
 
 // showFileDialog affiche le dialogue de fichiers et donne le focus

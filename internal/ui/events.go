@@ -9,8 +9,8 @@ import (
 	"github.com/jesseduffield/gocui"
 )
 
-// Events gère la logique des événements du watcher et leur traitement
-// (ajout, filtrage, tri, agrégation)
+// Events manages the logic of watcher events and their processing
+// (adding, filtering, sorting, aggregation)
 type Events struct {
 	ui *UI
 }
@@ -19,10 +19,10 @@ func NewEvents(ui *UI) *Events {
 	return &Events{ui: ui}
 }
 
-// addEvent ajoute un nouvel événement à l’état
+// addEvent adds a new event to the state
 func (e *Events) addEvent(path string, operation fsnotify.Op, isDir bool) {
 	if e.ui.state.AggregateEvents {
-		// Vérifie si un événement similaire existe dans la dernière seconde
+		// Check if a similar event exists in the last second
 		now := time.Now()
 		for _, event := range e.ui.state.Events {
 			if event.Path == path && event.Operation == operation &&
@@ -34,7 +34,7 @@ func (e *Events) addEvent(path string, operation fsnotify.Op, isDir bool) {
 		}
 	}
 
-	// Ajoute un nouvel événement
+	// Add a new event
 	event := &FileEvent{
 		Path:      path,
 		Operation: operation,
@@ -44,12 +44,12 @@ func (e *Events) addEvent(path string, operation fsnotify.Op, isDir bool) {
 	}
 	e.ui.state.Events = append(e.ui.state.Events, event)
 
-	// Limite le nombre d’événements
+	// Limit the number of events
 	if len(e.ui.state.Events) > e.ui.state.MaxEvents {
 		e.ui.state.Events = e.ui.state.Events[1:]
 	}
 
-	// Met à jour l’UI si initialisée
+	// Update the UI if initialized
 	if e.ui.gui != nil {
 		e.ui.gui.Update(func(g *gocui.Gui) error {
 			if v, err := g.View(EventsView); err == nil {
@@ -66,7 +66,7 @@ func (e *Events) addEvent(path string, operation fsnotify.Op, isDir bool) {
 	}
 }
 
-// watchEvents écoute les événements du watcher
+// watchEvents listens to watcher events
 func (e *Events) watchEvents() {
 	for {
 		select {
@@ -84,26 +84,26 @@ func (e *Events) watchEvents() {
 			if !ok {
 				return
 			}
-			// Ignore l’erreur pour l’instant
+			// Ignore the error for now
 			_ = err
 		}
 	}
 }
 
-// getFilteredEvents retourne les événements filtrés et triés
+// getFilteredEvents returns the filtered and sorted events
 func (e *Events) getFilteredEvents() []*FileEvent {
 	filtered := make([]*FileEvent, 0)
 	for _, event := range e.ui.state.Events {
-		// Filtre chemin
+		// Filter path
 		if e.ui.state.Filter.PathFilter != "" &&
 			!strings.Contains(strings.ToLower(event.Path), strings.ToLower(e.ui.state.Filter.PathFilter)) {
 			continue
 		}
-		// Filtre opération
+		// Filter operation
 		if e.ui.state.Filter.OperationFilter != 0 && event.Operation != e.ui.state.Filter.OperationFilter {
 			continue
 		}
-		// Filtre type
+		// Filter type
 		if event.IsDir && !e.ui.state.Filter.ShowDirs {
 			continue
 		}
@@ -116,7 +116,7 @@ func (e *Events) getFilteredEvents() []*FileEvent {
 	return filtered
 }
 
-// sortEvents trie les événements selon l’option courante
+// sortEvents sorts events according to the current option
 func (e *Events) sortEvents(events []*FileEvent) {
 	switch e.ui.state.SortOption {
 	case SortByTime:
@@ -138,7 +138,7 @@ func (e *Events) sortEvents(events []*FileEvent) {
 	}
 }
 
-// getSortOptionName retourne le nom de l’option de tri courante
+// getSortOptionName returns the name of the current sort option
 func (e *Events) getSortOptionName() string {
 	switch e.ui.state.SortOption {
 	case SortByTime:

@@ -13,12 +13,22 @@ import (
 type MockWatcher struct {
 	events chan fsnotify.Event
 	errors chan error
+	roots  []string
 }
 
 func NewMockWatcher() *MockWatcher {
 	return &MockWatcher{
 		events: make(chan fsnotify.Event, 100),
 		errors: make(chan error, 10),
+		roots:  []string{"/test/path"},
+	}
+}
+
+func NewMockWatcherWithRoots(roots []string) *MockWatcher {
+	return &MockWatcher{
+		events: make(chan fsnotify.Event, 100),
+		errors: make(chan error, 10),
+		roots:  roots,
 	}
 }
 
@@ -32,6 +42,17 @@ func (m *MockWatcher) Errors() <-chan error {
 
 func (m *MockWatcher) AddDirectory(path string) error {
 	return nil
+}
+
+func (m *MockWatcher) GetRoots() []string {
+	return m.roots
+}
+
+func (m *MockWatcher) GetRoot() string {
+	if len(m.roots) > 0 {
+		return m.roots[0]
+	}
+	return ""
 }
 
 func (m *MockWatcher) Close() {
@@ -248,5 +269,88 @@ func TestNavigationKeys(t *testing.T) {
 	expectedBottom = 14
 	if ui.GetState().ScrollOffset != expectedBottom {
 		t.Errorf("Expected scroll offset %d after MoveDown at bottom, got %d", expectedBottom, ui.GetState().ScrollOffset)
+	}
+}
+
+// TestMultipleRootPaths tests the multiple root paths functionality
+func TestMultipleRootPaths(t *testing.T) {
+	// Test with single root (backward compatibility)
+	mockWatcher := NewMockWatcher()
+	defer mockWatcher.Close()
+
+	uiInstance := ui.NewUI(mockWatcher, "/test/path")
+
+	// Test single root
+	rootPaths := uiInstance.GetRootPaths()
+	if len(rootPaths) != 1 {
+		t.Errorf("Expected 1 root path, got %d", len(rootPaths))
+	}
+	if rootPaths[0] != "/test/path" {
+		t.Errorf("Expected root path '/test/path', got '%s'", rootPaths[0])
+	}
+
+	// Test display format for single root
+	display := uiInstance.GetRootPathsDisplay()
+	if display != "/test/path" {
+		t.Errorf("Expected display '/test/path', got '%s'", display)
+	}
+
+	// Test with multiple roots
+	mockWatcherMulti := NewMockWatcherWithRoots([]string{"/test/path1", "/test/path2", "/test/path3"})
+	defer mockWatcherMulti.Close()
+
+	uiInstanceMulti := ui.NewUI(mockWatcherMulti, "/test/path1")
+
+	// Test multiple roots
+	rootPaths = uiInstanceMulti.GetRootPaths()
+	if len(rootPaths) != 3 {
+		t.Errorf("Expected 3 root paths, got %d", len(rootPaths))
+	}
+
+	// Test display format for multiple roots (3 or fewer)
+	display = uiInstanceMulti.GetRootPathsDisplay()
+	expectedDisplay := "/test/path1, /test/path2, /test/path3"
+	if display != expectedDisplay {
+		t.Errorf("Expected display '%s', got '%s'", expectedDisplay, display)
+	}
+
+	// Test with many roots
+	mockWatcherMany := NewMockWatcherWithRoots([]string{"/test/path1", "/test/path2", "/test/path3", "/test/path4", "/test/path5"})
+	defer mockWatcherMany.Close()
+
+	uiInstanceMany := ui.NewUI(mockWatcherMany, "/test/path1")
+
+	// Test display format for many roots (more than 3)
+	display = uiInstanceMany.GetRootPathsDisplay()
+	expectedDisplay = "/test/path1, /test/path2, +3 more"
+	if display != expectedDisplay {
+		t.Errorf("Expected display '%s', got '%s'", expectedDisplay, display)
+	}
+}
+
+// TestWatcherInterface tests that the watcher interface is properly implemented
+func TestWatcherInterface(t *testing.T) {
+	mockWatcher := NewMockWatcherWithRoots([]string{"/test/path1", "/test/path2"})
+	defer mockWatcher.Close()
+
+	// Test GetRoots
+	roots := mockWatcher.GetRoots()
+	if len(roots) != 2 {
+		t.Errorf("Expected 2 roots, got %d", len(roots))
+	}
+
+	// Test GetRoot (should return first root)
+	root := mockWatcher.GetRoot()
+	if root != "/test/path1" {
+		t.Errorf("Expected first root '/test/path1', got '%s'", root)
+	}
+
+	// Test with empty roots
+	mockWatcherEmpty := NewMockWatcherWithRoots([]string{})
+	defer mockWatcherEmpty.Close()
+
+	root = mockWatcherEmpty.GetRoot()
+	if root != "" {
+		t.Errorf("Expected empty root, got '%s'", root)
 	}
 }

@@ -70,37 +70,21 @@ type FileDialogState struct {
 	IsEditing   bool   // Whether we're editing the filename
 }
 
-// UIState represents the current state of the UI
-type UIState struct {
-	Events          []*FileEvent
-	Filter          Filter
-	SortOption      SortOption
-	SelectedPath    string
-	ScrollOffset    int
-	MaxEvents       int
-	AggregateEvents bool            // Toggle for event aggregation
-	ShowDetails     bool            // Toggle for details popup
-	SelectedEvent   *FileEvent      // Currently selected event for details
-	ExportFilename  string          // Current export filename
-	ImportFilename  string          // Current import filename
-	ShowFileDialog  bool            // Toggle for file dialog
-	FileDialog      FileDialogState // File dialog state
-	CurrentFocus    FocusMode       // Current focus mode
-}
-
 // ViewNames for the TUI
 const (
-	EventsView     = "events"
-	StatusView     = "status"
-	FilterView     = "filter"
-	HelpView       = "help"
-	DetailsView    = "details"
-	ExportView     = "export"
-	ImportView     = "import"
-	FileDialogView = "filedialog"
-	FileListView   = "filelist"
-	FilenameView   = "filename"
-	PathView       = "path"
+	EventsView        = "events"
+	StatusView        = "status"
+	FilterView        = "filter"
+	HelpView          = "help"
+	DetailsView       = "details"
+	ExportView        = "export"
+	ImportView        = "import"
+	FileDialogView    = "filedialog"
+	FileListView      = "filelist"
+	FilenameView      = "filename"
+	PathView          = "path"
+	FolderManagerView = "foldermanager"
+	FolderListView    = "folderlist"
 )
 
 // FocusMode represents the current focus mode of the UI
@@ -110,4 +94,36 @@ const (
 	FocusMain FocusMode = iota
 	FocusDetails
 	FocusFileDialog
+	FocusFolderManager
+	FocusWatchedFolders // Focus on "Currently Watching" panel
+	FocusFolderBrowser  // Focus on "Available Folders" panel
 )
+
+// FolderManagerState represents the state of the folder manager
+type FolderManagerState struct {
+	CurrentPath  string
+	SelectedIdx  int       // Selected index in the "Available Folders" panel
+	WatchedIdx   int       // Selected index in the "Currently Watching" panel
+	ScrollOffset int       // Scroll offset for long directory lists
+	ActivePanel  FocusMode // Which panel is currently focused (FocusWatchedFolders or FocusFolderBrowser)
+}
+
+// UIState represents the current state of the UI
+type UIState struct {
+	Events            []*FileEvent
+	Filter            Filter
+	SortOption        SortOption
+	SelectedPath      string
+	ScrollOffset      int
+	MaxEvents         int
+	AggregateEvents   bool               // Toggle for event aggregation
+	ShowDetails       bool               // Toggle for details popup
+	SelectedEvent     *FileEvent         // Currently selected event for details
+	ExportFilename    string             // Current export filename
+	ImportFilename    string             // Current import filename
+	ShowFileDialog    bool               // Toggle for file dialog
+	ShowFolderManager bool               // Toggle for folder manager
+	FileDialog        FileDialogState    // File dialog state
+	FolderManager     FolderManagerState // Folder manager state
+	CurrentFocus      FocusMode          // Current focus mode
+}

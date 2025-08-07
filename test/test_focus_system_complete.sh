@@ -1,0 +1,33 @@
+#!/bin/bash
+
+echo "=== Testing Complete Focus System ===="
+echo ""
+echo "Testing the new focus management system with visual indicators and Tab navigation"
+echo ""
+echo "Instructions:"
+echo "1. Press Ctrl+F to open folder manager"
+echo "2. FOCUS INDICATION:"
+echo "   - 'Currently Watching' panel title should be CYAN when focused"
+echo "   - 'Available Folders' panel title should be CYAN when focused"
+echo "   - Non-focused panels should have WHITE titles"
+echo "3. NAVIGATION:"
+echo "   - Tab: Switch to next panel (Currently Watching -> Available Folders -> Currently Watching)"
+echo "   - Shift+Tab: Switch to previous panel"
+echo "   - Arrow Right (->): Switch from left to right panel"
+echo "   - Arrow Left (<-): Switch from right to left panel"
+echo "4. CURSOR BEHAVIOR:"
+echo "   - 'Currently Watching' now uses standard gocui cursor (no triangle)"
+echo "   - Navigation with arrow keys should work in both panels"
+echo "   - 'r' key removes selected folder from Currently Watching panel"
+echo "5. Press Esc to close"
+echo ""
+echo "Expected behavior:"
+echo "- Default focus starts on 'Currently Watching' (left panel, cyan title)"
+echo "- Tab switches focus between panels with title color changes"
+echo "- Arrow keys navigate within focused panel"
+echo "- Left/Right arrows switch panels as well as navigate"
+echo ""
+echo "Press Enter to start..."
+read
+
+./watch-fs -path /Users/philippebouamriou/Documents
