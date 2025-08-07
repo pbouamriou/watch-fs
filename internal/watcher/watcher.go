@@ -56,8 +56,9 @@ func (w *Watcher) Close() error {
 	return w.watcher.Close()
 }
 
-// AddRecursive adds a directory and all its subdirectories to the watcher
-func (w *Watcher) AddRecursive(root string) error {
+// addRecursiveUnsafe adds a directory and all its subdirectories to the watcher
+// This function is NOT thread-safe and assumes the caller holds the mutex
+func (w *Watcher) addRecursiveUnsafe(root string) error {
 	return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -67,12 +68,19 @@ func (w *Watcher) AddRecursive(root string) error {
 			if err != nil {
 				return err
 			}
-			w.mu.Lock()
+			// No mutex needed - caller must hold the lock
 			w.watched[path] = true
-			w.mu.Unlock()
 		}
 		return nil
 	})
+}
+
+// AddRecursive adds a directory and all its subdirectories to the watcher
+// This function is thread-safe
+func (w *Watcher) AddRecursive(root string) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.addRecursiveUnsafe(root)
 }
 
 // AddAllRootsRecursive adds all root directories and their subdirectories to the watcher
@@ -143,8 +151,8 @@ func (w *Watcher) AddRoot(root string) error {
 	// Add the root to our list
 	w.roots = append(w.roots, root)
 
-	// Add it recursively to the watcher
-	return w.AddRecursive(root)
+	// Add it recursively to the watcher (using unsafe version since we hold the lock)
+	return w.addRecursiveUnsafe(root)
 }
 
 // RemoveRoot removes a root directory from watching
@@ -182,7 +190,7 @@ func (w *Watcher) recreateWatcherWithoutRoot(rootToRemove string) error {
 	}
 
 	// Close old watcher
-	w.watcher.Close()
+	_ = w.watcher.Close()
 
 	// Create new watcher
 	newWatcher, err := fsnotify.NewWatcher()
@@ -193,10 +201,10 @@ func (w *Watcher) recreateWatcherWithoutRoot(rootToRemove string) error {
 	w.watcher = newWatcher
 	w.watched = make(map[string]bool)
 
-	// Re-add all roots except the one to remove
+	// Re-add all roots except the one to remove (using unsafe version since caller holds the lock)
 	for _, root := range w.roots {
 		if root != rootToRemove {
-			if err := w.AddRecursive(root); err != nil {
+			if err := w.addRecursiveUnsafe(root); err != nil {
 				return err
 			}
 		}
@@ -226,4 +234,34 @@ func (w *Watcher) GetWatchedCount() int {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 	return len(w.watched)
+}
+
+// GetWatchedCountForRoot returns the number of directories being watched under a specific root
+func (w *Watcher) GetWatchedCountForRoot(root string) int {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	// Clean the root path to ensure consistent comparison
+	cleanRoot := filepath.Clean(root)
+	if !filepath.IsAbs(cleanRoot) {
+		cleanRoot, _ = filepath.Abs(cleanRoot)
+	}
+
+	count := 0
+	for watchedPath := range w.watched {
+		cleanWatched := filepath.Clean(watchedPath)
+		if !filepath.IsAbs(cleanWatched) {
+			cleanWatched, _ = filepath.Abs(cleanWatched)
+		}
+
+		// Check if the watched path is under this root
+		// Use filepath.Rel to check if watchedPath is under root
+		if rel, err := filepath.Rel(cleanRoot, cleanWatched); err == nil && !filepath.IsAbs(rel) && rel != ".." {
+			// Check if it doesn't start with "../" (which means it's not under the root)
+			if len(rel) < 3 || rel[:3] != "../" {
+				count++
+			}
+		}
+	}
+	return count
 }

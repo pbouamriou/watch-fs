@@ -1,0 +1,32 @@
+#!/bin/bash
+
+echo "=== Testing Enhanced Focus Visual Indication ===="
+echo ""
+echo "Testing improved visual focus with synchronized title and frame colors"
+echo ""
+echo "IMPROVEMENT DETAILS:"
+echo "- Focused panel: Title AND frame in cyan"  
+echo "- Non-focused panel: Title AND frame in white"
+echo ""
+echo "Instructions:"
+echo "1. Press Ctrl+F to open folder manager"
+echo "2. VISUAL VERIFICATION:"
+echo "   - Check that 'Currently Watching' has CYAN title AND CYAN frame"
+echo "   - Check that 'Available Folders' has WHITE title AND WHITE frame"
+echo "3. FOCUS SWITCHING:"
+echo "   - Tab: Switch panels and observe both title AND frame change color"
+echo "   - Arrow Right/Left: Switch panels with full visual feedback"
+echo "   - Both colors should change together (title + frame)"
+echo "4. EXPECTED BEHAVIOR:"
+echo "   - Focused panel: Cyan title + Cyan frame (strong visual indication)"
+echo "   - Non-focused panel: White title + White frame (dimmed)"
+echo "5. Press Esc to close"
+echo ""
+echo "BEFORE vs AFTER:"
+echo "BEFORE: Only title color changed (frame stayed same color)"
+echo "AFTER:  Both title AND frame color change (stronger visual cue)"
+echo ""
+echo "Press Enter to start..."
+read
+
+./watch-fs -path /Users/philippebouamriou/Documents

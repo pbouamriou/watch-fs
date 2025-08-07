@@ -95,12 +95,17 @@ const (
 	FocusDetails
 	FocusFileDialog
 	FocusFolderManager
+	FocusWatchedFolders // Focus on "Currently Watching" panel
+	FocusFolderBrowser  // Focus on "Available Folders" panel
 )
 
 // FolderManagerState represents the state of the folder manager
 type FolderManagerState struct {
-	CurrentPath string
-	SelectedIdx int
+	CurrentPath  string
+	SelectedIdx  int       // Selected index in the "Available Folders" panel
+	WatchedIdx   int       // Selected index in the "Currently Watching" panel
+	ScrollOffset int       // Scroll offset for long directory lists
+	ActivePanel  FocusMode // Which panel is currently focused (FocusWatchedFolders or FocusFolderBrowser)
 }
 
 // UIState represents the current state of the UI

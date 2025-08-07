@@ -31,37 +31,80 @@ func (fm *FolderManager) Hide() {
 	fm.ui.state.ShowFolderManager = false
 }
 
-// UpdateMainView updates the main folder manager view
+// UpdateMainView updates the main folder manager view (background frame)
 func (fm *FolderManager) UpdateMainView(v *gocui.View) {
 	v.Clear()
-	v.Title = "Folder Manager"
+	// This is now just the background frame - content is in sub-views
+}
+
+// UpdateWatchedFoldersView updates the "Currently Watching" sub-view (left panel)
+func (fm *FolderManager) UpdateWatchedFoldersView(v *gocui.View) {
+	v.Clear()
 
 	cyan := color.New(color.FgCyan).SprintFunc()
 	green := color.New(color.FgGreen).SprintFunc()
 	red := color.New(color.FgRed).SprintFunc()
 	yellow := color.New(color.FgYellow).SprintFunc()
+	blue := color.New(color.FgBlue).SprintFunc()
+	magenta := color.New(color.FgMagenta).SprintFunc()
 
-	// Get current watched folders
-	roots := fm.ui.GetRootPaths()
-
-	_, _ = fmt.Fprintf(v, "%sCurrently Watching:%s\n", cyan("="), cyan("="))
-	_, _ = fmt.Fprintf(v, "\n")
+	// Get current watched folders directly from watcher
+	roots := fm.getRealWatchedRoots()
 
 	if len(roots) == 0 {
-		_, _ = fmt.Fprintf(v, "%sNo folders being watched%s\n", red(""), red(""))
-	} else {
-		for i, root := range roots {
-			prefix := "  "
-			if i == fm.ui.state.FolderManager.SelectedIdx {
-				prefix = "> "
-			}
-			_, _ = fmt.Fprintf(v, "%s%s%s\n", prefix, green(root), "")
+		_, _ = fmt.Fprintf(v, "\n%s   👁️  No folders being watched%s\n", red(""), red(""))
+		_, _ = fmt.Fprintf(v, "%s   💡 Use Ctrl+F to add folders%s\n", yellow(""), yellow(""))
+		return
+	}
+
+	// Display watched folders as simple list (use standard cursor highlighting)
+	for _, root := range roots {
+		// Get base name for display
+		baseName := filepath.Base(root)
+		if baseName == "." || baseName == "/" {
+			baseName = root
 		}
+
+		// Get watched count for this specific root if available
+		watchedCount := ""
+		if counter, ok := fm.ui.watcher.(interface{ GetWatchedCountForRoot(string) int }); ok {
+			rootWatched := counter.GetWatchedCountForRoot(root)
+			if rootWatched > 0 {
+				watchedCount = fmt.Sprintf(" %s(%d)%s", blue(""), rootWatched, blue(""))
+			}
+		}
+
+		// Simple display format suitable for cursor highlighting
+		_, _ = fmt.Fprintf(v, "  %s%s\n", magenta(baseName), green(watchedCount))
+	}
+
+	// Add some spacing and info
+	_, _ = fmt.Fprintf(v, "\n")
+	_, _ = fmt.Fprintf(v, "%s--- Stats ---%s\n", cyan(""), cyan(""))
+	_, _ = fmt.Fprintf(v, " Roots: %s%d%s\n", yellow(""), len(roots), yellow(""))
+
+	if counter, ok := fm.ui.watcher.(interface{ GetWatchedCount() int }); ok {
+		totalWatched := counter.GetWatchedCount()
+		_, _ = fmt.Fprintf(v, " Total: %s%d%s\n", yellow(""), totalWatched, yellow(""))
 	}
 
 	_, _ = fmt.Fprintf(v, "\n")
-	_, _ = fmt.Fprintf(v, "%sTotal: %d folder(s)%s\n", yellow(""), len(roots), yellow(""))
-	_, _ = fmt.Fprintf(v, "%sWatched directories: %d%s\n", yellow(""), fm.ui.watcher.(interface{ GetWatchedCount() int }).GetWatchedCount(), yellow(""))
+	_, _ = fmt.Fprintf(v, "%s--- Keys ---%s\n", cyan(""), cyan(""))
+	_, _ = fmt.Fprintf(v, " %sUp/Down%s Nav %sR%s Del\n", blue(""), blue(""), blue(""), blue(""))
+
+	// Set cursor position based on WatchedIdx
+	if len(roots) > 0 {
+		watchedIdx := fm.ui.state.FolderManager.WatchedIdx
+		if watchedIdx >= len(roots) {
+			watchedIdx = len(roots) - 1
+			fm.ui.state.FolderManager.WatchedIdx = watchedIdx
+		}
+		if watchedIdx < 0 {
+			watchedIdx = 0
+			fm.ui.state.FolderManager.WatchedIdx = watchedIdx
+		}
+		v.SetCursor(0, watchedIdx)
+	}
 }
 
 // UpdateFolderListView updates the folder selection view
@@ -87,28 +130,14 @@ func (fm *FolderManager) UpdateFolderListView(v *gocui.View) {
 	// Add parent directory option
 	parentDir := filepath.Dir(currentPath)
 	if parentDir != currentPath {
-		prefix := "  "
-		if fm.ui.state.FolderManager.SelectedIdx == 0 {
-			prefix = "> "
-		}
-		_, _ = fmt.Fprintf(v, "%s%s%s\n", prefix, green(".."), "")
+		_, _ = fmt.Fprintf(v, "  %s\n", green(".."))
 	}
 
 	// List directories
-	dirIndex := 1
-	if parentDir != currentPath {
-		dirIndex = 1
-	} else {
-		dirIndex = 0
-	}
+	// (dirIndex calculation removed as it was unused)
 
 	for _, entry := range entries {
 		if entry.IsDir() && !fm.ui.ShouldIgnore(entry.Name()) {
-			prefix := "  "
-			if fm.ui.state.FolderManager.SelectedIdx == dirIndex {
-				prefix = "> "
-			}
-
 			dirPath := filepath.Join(currentPath, entry.Name())
 			isWatching := fm.ui.watcher.(interface{ IsWatching(string) bool }).IsWatching(dirPath)
 
@@ -117,10 +146,12 @@ func (fm *FolderManager) UpdateFolderListView(v *gocui.View) {
 				status = " [WATCHING]"
 			}
 
-			_, _ = fmt.Fprintf(v, "%s%s%s%s\n", prefix, green(entry.Name()), status, "")
-			dirIndex++
+			_, _ = fmt.Fprintf(v, "  %s%s\n", green(entry.Name()), status)
 		}
 	}
+
+	// Update scroll position to ensure selected item is visible
+	fm.updateScrollPosition(v)
 }
 
 // UpdatePathView updates the path display view
@@ -144,7 +175,7 @@ func (fm *FolderManager) HandleInput(g *gocui.Gui, v *gocui.View) error {
 }
 
 // handleMainViewInput handles input for the main folder manager view
-func (fm *FolderManager) handleMainViewInput(g *gocui.Gui, v *gocui.View) error {
+func (fm *FolderManager) handleMainViewInput(_ *gocui.Gui, v *gocui.View) error {
 	switch v.Name() {
 	case FolderManagerView:
 		// Handle navigation and actions for watched folders
@@ -154,37 +185,10 @@ func (fm *FolderManager) handleMainViewInput(g *gocui.Gui, v *gocui.View) error 
 }
 
 // handleFolderListViewInput handles input for the folder list view
-func (fm *FolderManager) handleFolderListViewInput(g *gocui.Gui, v *gocui.View) error {
-	currentPath := fm.ui.state.FolderManager.CurrentPath
-	entries, err := os.ReadDir(currentPath)
-	if err != nil {
-		return err
-	}
-
-	// Get directories
-	var dirs []string
-	parentDir := filepath.Dir(currentPath)
-	if parentDir != currentPath {
-		dirs = append(dirs, "..")
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() && !fm.ui.ShouldIgnore(entry.Name()) {
-			dirs = append(dirs, entry.Name())
-		}
-	}
-
-	selectedIdx := fm.ui.state.FolderManager.SelectedIdx
-	if selectedIdx < 0 {
-		selectedIdx = 0
-	}
-	if selectedIdx >= len(dirs) {
-		selectedIdx = len(dirs) - 1
-	}
-
+func (fm *FolderManager) handleFolderListViewInput(_ *gocui.Gui, v *gocui.View) error {
 	switch v.Name() {
 	case FolderListView:
-		// Navigation
+		// Navigation logic would go here if needed
 		return nil
 	}
 	return nil
@@ -195,31 +199,34 @@ func (fm *FolderManager) NavigateUp() {
 	if fm.ui.state.FolderManager.SelectedIdx > 0 {
 		fm.ui.state.FolderManager.SelectedIdx--
 	}
+
+	// Ensure the selected index stays within bounds
+	totalItems := fm.getTotalDirectories()
+	if fm.ui.state.FolderManager.SelectedIdx >= totalItems {
+		fm.ui.state.FolderManager.SelectedIdx = totalItems - 1
+	}
+	if fm.ui.state.FolderManager.SelectedIdx < 0 {
+		fm.ui.state.FolderManager.SelectedIdx = 0
+	}
 }
 
 // NavigateDown moves selection down
 func (fm *FolderManager) NavigateDown() {
-	// Get current directories to know the limit
-	currentPath := fm.ui.state.FolderManager.CurrentPath
-	entries, err := os.ReadDir(currentPath)
-	if err != nil {
+	totalItems := fm.getTotalDirectories()
+	if totalItems == 0 {
 		return
 	}
 
-	var dirs []string
-	parentDir := filepath.Dir(currentPath)
-	if parentDir != currentPath {
-		dirs = append(dirs, "..")
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() && !fm.ui.ShouldIgnore(entry.Name()) {
-			dirs = append(dirs, entry.Name())
-		}
-	}
-
-	if fm.ui.state.FolderManager.SelectedIdx < len(dirs)-1 {
+	if fm.ui.state.FolderManager.SelectedIdx < totalItems-1 {
 		fm.ui.state.FolderManager.SelectedIdx++
+	}
+
+	// Ensure the selected index stays within bounds
+	if fm.ui.state.FolderManager.SelectedIdx >= totalItems {
+		fm.ui.state.FolderManager.SelectedIdx = totalItems - 1
+	}
+	if fm.ui.state.FolderManager.SelectedIdx < 0 {
+		fm.ui.state.FolderManager.SelectedIdx = 0
 	}
 }
 
@@ -308,8 +315,13 @@ func (fm *FolderManager) AddCurrentFolder() error {
 		return err
 	}
 
-	// Update UI state
-	fm.ui.rootPaths = fm.ui.GetRootPaths()
+	// Update UI state with real watcher roots
+	if multiRootWatcher, ok := fm.ui.watcher.(interface{ GetRoots() []string }); ok {
+		fm.ui.rootPaths = multiRootWatcher.GetRoots()
+	}
+
+	// Close the folder manager popup after successful addition
+	fm.Hide()
 
 	return nil
 }
@@ -330,8 +342,10 @@ func (fm *FolderManager) RemoveSelectedFolder() error {
 		return err
 	}
 
-	// Update UI state
-	fm.ui.rootPaths = fm.ui.GetRootPaths()
+	// Update UI state with real watcher roots
+	if multiRootWatcher, ok := fm.ui.watcher.(interface{ GetRoots() []string }); ok {
+		fm.ui.rootPaths = multiRootWatcher.GetRoots()
+	}
 
 	// Adjust selection index
 	if selectedIdx >= len(fm.ui.rootPaths) {
@@ -347,18 +361,25 @@ func (fm *FolderManager) RemoveSelectedFolder() error {
 // Up moves selection up in the folder list
 func (fm *FolderManager) Up(g *gocui.Gui, v *gocui.View) error {
 	fm.NavigateUp()
+	fm.updateScrollPosition(v)
 	return nil
 }
 
 // Down moves selection down in the folder list
 func (fm *FolderManager) Down(g *gocui.Gui, v *gocui.View) error {
 	fm.NavigateDown()
+	fm.updateScrollPosition(v)
 	return nil
 }
 
 // Enter selects the current item (navigate into directory)
 func (fm *FolderManager) Enter(g *gocui.Gui, v *gocui.View) error {
-	return fm.SelectCurrentItem()
+	err := fm.SelectCurrentItem()
+	if err == nil {
+		// After navigating to a new directory, update scroll position
+		fm.updateScrollPosition(v)
+	}
+	return err
 }
 
 // Cancel closes the folder manager
@@ -375,4 +396,217 @@ func (fm *FolderManager) Add(g *gocui.Gui, v *gocui.View) error {
 // Remove removes the selected folder from watch
 func (fm *FolderManager) Remove(g *gocui.Gui, v *gocui.View) error {
 	return fm.RemoveSelectedFolder()
+}
+
+// updateScrollPosition adjusts the scroll position to keep the selected item visible
+func (fm *FolderManager) updateScrollPosition(v *gocui.View) {
+	totalItems := fm.getTotalDirectories()
+	if totalItems == 0 {
+		return
+	}
+
+	selectedIdx := fm.ui.state.FolderManager.SelectedIdx
+	if selectedIdx >= totalItems {
+		selectedIdx = totalItems - 1
+		fm.ui.state.FolderManager.SelectedIdx = selectedIdx
+	}
+	if selectedIdx < 0 {
+		selectedIdx = 0
+		fm.ui.state.FolderManager.SelectedIdx = selectedIdx
+	}
+
+	_, viewHeight := v.InnerSize()
+	if viewHeight <= 0 {
+		viewHeight = 10
+	}
+
+	effectiveHeight := viewHeight - 2
+	if effectiveHeight <= 0 {
+		effectiveHeight = 1
+	}
+
+	_, currentY := v.Origin()
+	visibleStart := currentY
+	visibleEnd := currentY + effectiveHeight - 1
+
+	if selectedIdx < visibleStart {
+		v.SetOrigin(0, selectedIdx)
+	} else if selectedIdx > visibleEnd {
+		newOrigin := max(selectedIdx-effectiveHeight+1, 0)
+		v.SetOriginY(newOrigin)
+	}
+
+	_, newOriginY := v.Origin()
+	cursorY := selectedIdx - newOriginY + 2
+	if cursorY >= 0 && cursorY < viewHeight {
+		v.SetCursorY(cursorY)
+	}
+}
+
+// getTotalDirectories returns the total number of directory entries (including ".." if applicable)
+func (fm *FolderManager) getTotalDirectories() int {
+	currentPath := fm.ui.state.FolderManager.CurrentPath
+	entries, err := os.ReadDir(currentPath)
+	if err != nil {
+		return 0
+	}
+
+	var totalItems int
+	parentDir := filepath.Dir(currentPath)
+	if parentDir != currentPath {
+		totalItems = 1 // Parent directory ".."
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() && !fm.ui.ShouldIgnore(entry.Name()) {
+			totalItems++
+		}
+	}
+
+	return totalItems
+}
+
+// Helper function for max since Go doesn't have built-in max for int
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// getRealWatchedRoots gets the actual watched roots from the watcher
+func (fm *FolderManager) getRealWatchedRoots() []string {
+	if multiRootWatcher, ok := fm.ui.watcher.(interface{ GetRoots() []string }); ok {
+		roots := multiRootWatcher.GetRoots()
+		return roots
+	}
+	return []string{fm.ui.rootPath}
+}
+
+// NavigateWatchedUp moves selection up in the "Currently Watching" list
+func (fm *FolderManager) NavigateWatchedUp(g *gocui.Gui, v *gocui.View) error {
+	roots := fm.getRealWatchedRoots()
+	if len(roots) == 0 {
+		return nil
+	}
+
+	// Ensure we're operating on the watched folders list, not the directory browser
+	if fm.ui.state.FolderManager.WatchedIdx > 0 {
+		fm.ui.state.FolderManager.WatchedIdx--
+	}
+
+	return nil
+}
+
+// NavigateWatchedDown moves selection down in the "Currently Watching" list
+func (fm *FolderManager) NavigateWatchedDown(g *gocui.Gui, v *gocui.View) error {
+	roots := fm.getRealWatchedRoots()
+	if len(roots) == 0 {
+		return nil
+	}
+
+	// Ensure we're operating on the watched folders list, not the directory browser
+	if fm.ui.state.FolderManager.WatchedIdx < len(roots)-1 {
+		fm.ui.state.FolderManager.WatchedIdx++
+	}
+
+	return nil
+}
+
+// RemoveWatchedFolder removes the currently selected watched folder
+func (fm *FolderManager) RemoveWatchedFolder(g *gocui.Gui, v *gocui.View) error {
+	roots := fm.getRealWatchedRoots()
+	if len(roots) == 0 {
+		return nil
+	}
+
+	selectedIdx := fm.ui.state.FolderManager.WatchedIdx
+	if selectedIdx < 0 || selectedIdx >= len(roots) {
+		return nil
+	}
+
+	folderToRemove := roots[selectedIdx]
+
+	// Remove from watcher
+	if err := fm.ui.watcher.(interface{ RemoveRoot(string) error }).RemoveRoot(folderToRemove); err != nil {
+		return err
+	}
+
+	// Update UI state with real watcher roots
+	if multiRootWatcher, ok := fm.ui.watcher.(interface{ GetRoots() []string }); ok {
+		fm.ui.rootPaths = multiRootWatcher.GetRoots()
+	}
+
+	// Adjust selection index to stay within bounds
+	newRoots := fm.getRealWatchedRoots()
+	if selectedIdx >= len(newRoots) {
+		fm.ui.state.FolderManager.WatchedIdx = len(newRoots) - 1
+	}
+	if fm.ui.state.FolderManager.WatchedIdx < 0 {
+		fm.ui.state.FolderManager.WatchedIdx = 0
+	}
+
+	return nil
+}
+
+// SwitchToNextPanel switches focus to the next panel (Tab key)
+func (fm *FolderManager) SwitchToNextPanel(g *gocui.Gui, v *gocui.View) error {
+	switch fm.ui.state.FolderManager.ActivePanel {
+	case FocusWatchedFolders:
+		fm.ui.state.FolderManager.ActivePanel = FocusFolderBrowser
+		fm.ui.state.CurrentFocus = FocusFolderBrowser
+		if _, err := g.SetCurrentView(FolderListView); err != nil {
+			return err
+		}
+	case FocusFolderBrowser:
+		fm.ui.state.FolderManager.ActivePanel = FocusWatchedFolders
+		fm.ui.state.CurrentFocus = FocusWatchedFolders
+		if _, err := g.SetCurrentView("watched_folders"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SwitchToPreviousPanel switches focus to the previous panel (Shift+Tab key)
+func (fm *FolderManager) SwitchToPreviousPanel(g *gocui.Gui, v *gocui.View) error {
+	switch fm.ui.state.FolderManager.ActivePanel {
+	case FocusWatchedFolders:
+		fm.ui.state.FolderManager.ActivePanel = FocusFolderBrowser
+		fm.ui.state.CurrentFocus = FocusFolderBrowser
+		if _, err := g.SetCurrentView(FolderListView); err != nil {
+			return err
+		}
+	case FocusFolderBrowser:
+		fm.ui.state.FolderManager.ActivePanel = FocusWatchedFolders
+		fm.ui.state.CurrentFocus = FocusWatchedFolders
+		if _, err := g.SetCurrentView("watched_folders"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SwitchToRightPanel switches to right panel (Arrow Right key)
+func (fm *FolderManager) SwitchToRightPanel(g *gocui.Gui, v *gocui.View) error {
+	if fm.ui.state.FolderManager.ActivePanel == FocusWatchedFolders {
+		fm.ui.state.FolderManager.ActivePanel = FocusFolderBrowser
+		fm.ui.state.CurrentFocus = FocusFolderBrowser
+		if _, err := g.SetCurrentView(FolderListView); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SwitchToLeftPanel switches to left panel (Arrow Left key)
+func (fm *FolderManager) SwitchToLeftPanel(g *gocui.Gui, v *gocui.View) error {
+	if fm.ui.state.FolderManager.ActivePanel == FocusFolderBrowser {
+		fm.ui.state.FolderManager.ActivePanel = FocusWatchedFolders
+		fm.ui.state.CurrentFocus = FocusWatchedFolders
+		if _, err := g.SetCurrentView("watched_folders"); err != nil {
+			return err
+		}
+	}
+	return nil
 }

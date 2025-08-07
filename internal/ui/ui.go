@@ -11,6 +11,15 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// getAbsolutePath converts a relative path to absolute path, with fallback
+func getAbsolutePath(path string) string {
+	if absPath, err := filepath.Abs(path); err == nil {
+		return absPath
+	}
+	// Fallback to original path if conversion fails
+	return path
+}
+
 // UI represents the terminal user interface
 type UI struct {
 	gui           *gocui.Gui
@@ -66,15 +75,18 @@ func NewUI(watcher interface {
 			ShowFolderManager: false,     // Folder manager hidden by default
 			CurrentFocus:      FocusMain, // Start with main focus
 			FileDialog: FileDialogState{
-				CurrentPath: ".",
+				CurrentPath: getAbsolutePath("."),
 				Files:       make([]*FileEntry, 0),
 				SelectedIdx: 0,
 				Mode:        ModeSave,
 				Filter:      "*.db",
 			},
 			FolderManager: FolderManagerState{
-				CurrentPath: ".",
-				SelectedIdx: 0,
+				CurrentPath:  getAbsolutePath("."),
+				SelectedIdx:  0,
+				WatchedIdx:   0,
+				ScrollOffset: 0,
+				ActivePanel:  FocusWatchedFolders, // Start with "Currently Watching" panel focused
 			},
 		},
 		watcher:   watcher,

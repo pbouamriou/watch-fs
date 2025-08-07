@@ -16,6 +16,18 @@ import (
 // Version will be set by the linker during build
 var version = "dev"
 
+// Custom flag type for multiple --path flags
+type pathsFlag []string
+
+func (p *pathsFlag) String() string {
+	return strings.Join(*p, ",")
+}
+
+func (p *pathsFlag) Set(value string) error {
+	*p = append(*p, value)
+	return nil
+}
+
 func main() {
 	// Initialise le logger
 	if err := logger.Init(); err != nil {
@@ -23,12 +35,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	var rootPath string
-	var paths string // New flag for multiple paths
+	var paths string // Legacy flag for comma-separated paths
 	var useTUI bool
 	var showVersion bool
-	flag.StringVar(&rootPath, "path", "", "Directory to watch (deprecated, use -paths instead)")
-	flag.StringVar(&paths, "paths", "", "Comma-separated list of directories to watch")
+	var pathsVar pathsFlag
+	flag.Var(&pathsVar, "path", "Directory to watch (can be used multiple times)")
+	flag.StringVar(&paths, "paths", "", "Comma-separated list of directories to watch (legacy)")
 	flag.BoolVar(&useTUI, "tui", true, "Use terminal user interface (default: true)")
 	flag.BoolVar(&showVersion, "version", false, "Show version information")
 	flag.Parse()
@@ -38,22 +50,27 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Parse paths
+	// Parse paths - priority: multiple --path flags > legacy --paths > error
 	var rootPaths []string
-	if paths != "" {
-		// Use the new -paths flag
+	if len(pathsVar) > 0 {
+		// Use multiple --path flags (preferred method)
+		rootPaths = []string(pathsVar)
+		// Trim whitespace from each path
+		for i, path := range rootPaths {
+			rootPaths[i] = strings.TrimSpace(path)
+		}
+	} else if paths != "" {
+		// Use the legacy --paths flag (comma-separated)
 		rootPaths = strings.Split(paths, ",")
 		for i, path := range rootPaths {
 			rootPaths[i] = strings.TrimSpace(path)
 		}
-	} else if rootPath != "" {
-		// Use the deprecated -path flag for backward compatibility
-		rootPaths = []string{rootPath}
 	} else {
-		fmt.Println("Error: either -path or -paths flag is required")
+		fmt.Println("Error: at least one --path flag is required")
 		fmt.Println("Usage:")
-		fmt.Println("  watch-fs -path /single/directory")
-		fmt.Println("  watch-fs -paths '/dir1,/dir2,/dir3'")
+		fmt.Println("  watch-fs --path /single/directory")
+		fmt.Println("  watch-fs --path /dir1 --path /dir2 --path /dir3")
+		fmt.Println("  watch-fs --paths '/dir1,/dir2,/dir3'  (legacy)")
 		flag.Usage()
 		os.Exit(1)
 	}

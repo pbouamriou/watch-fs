@@ -289,12 +289,36 @@ func (l *Layout) layoutFolderManager(g *gocui.Gui, maxX, maxY int) error {
 				return err
 			}
 			v.Frame = true
-			v.Title = " Currently Watching "
 			v.BgColor = gocui.ColorBlack
 			v.FgColor = gocui.ColorWhite
 			v.Highlight = true
 			v.SelBgColor = gocui.Attribute(tcell.ColorDarkGreen)
 			v.SelFgColor = gocui.ColorBlack
+
+			// Set title and frame color with focus indication
+			if l.ui.state.FolderManager.ActivePanel == FocusWatchedFolders {
+				v.Title = " Currently Watching "
+				v.TitleColor = gocui.ColorCyan
+				v.FrameColor = gocui.ColorCyan
+			} else {
+				v.Title = " Currently Watching "
+				v.TitleColor = gocui.ColorWhite
+				v.FrameColor = gocui.ColorWhite
+			}
+
+			l.ui.folderManager.UpdateWatchedFoldersView(v)
+		} else {
+			// Update title and frame color based on focus
+			if l.ui.state.FolderManager.ActivePanel == FocusWatchedFolders {
+				v.Title = " Currently Watching "
+				v.TitleColor = gocui.ColorCyan
+				v.FrameColor = gocui.ColorCyan
+			} else {
+				v.Title = " Currently Watching "
+				v.TitleColor = gocui.ColorWhite
+				v.FrameColor = gocui.ColorWhite
+			}
+			l.ui.folderManager.UpdateWatchedFoldersView(v)
 		}
 
 		// Right side: Folder browser
@@ -305,14 +329,35 @@ func (l *Layout) layoutFolderManager(g *gocui.Gui, maxX, maxY int) error {
 				return err
 			}
 			v.Frame = true
-			v.Title = " Available Folders "
 			v.BgColor = gocui.ColorBlack
 			v.FgColor = gocui.ColorWhite
 			v.Highlight = true
 			v.SelBgColor = gocui.Attribute(tcell.ColorDarkGreen)
 			v.SelFgColor = gocui.ColorBlack
+
+			// Set title and frame color with focus indication
+			if l.ui.state.FolderManager.ActivePanel == FocusFolderBrowser {
+				v.Title = " Available Folders "
+				v.TitleColor = gocui.ColorCyan
+				v.FrameColor = gocui.ColorCyan
+			} else {
+				v.Title = " Available Folders "
+				v.TitleColor = gocui.ColorWhite
+				v.FrameColor = gocui.ColorWhite
+			}
+
 			l.ui.folderManager.UpdateFolderListView(v)
 		} else {
+			// Update title and frame color based on focus
+			if l.ui.state.FolderManager.ActivePanel == FocusFolderBrowser {
+				v.Title = " Available Folders "
+				v.TitleColor = gocui.ColorCyan
+				v.FrameColor = gocui.ColorCyan
+			} else {
+				v.Title = " Available Folders "
+				v.TitleColor = gocui.ColorWhite
+				v.FrameColor = gocui.ColorWhite
+			}
 			l.ui.folderManager.UpdateFolderListView(v)
 		}
 
@@ -370,8 +415,21 @@ func (l *Layout) setFocus(g *gocui.Gui) error {
 			}
 		}
 	} else if l.ui.state.ShowFolderManager {
-		if _, err := g.SetCurrentView(FolderListView); err != nil {
-			return err
+		// Set focus based on the active panel in folder manager
+		switch l.ui.state.FolderManager.ActivePanel {
+		case FocusWatchedFolders:
+			if _, err := g.SetCurrentView("watched_folders"); err != nil {
+				return err
+			}
+		case FocusFolderBrowser:
+			if _, err := g.SetCurrentView(FolderListView); err != nil {
+				return err
+			}
+		default:
+			// Default to watched folders panel
+			if _, err := g.SetCurrentView("watched_folders"); err != nil {
+				return err
+			}
 		}
 	}
 
