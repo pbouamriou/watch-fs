@@ -28,5 +28,4 @@ template: |
   go install github.com/pbouamriou/watch-fs/cmd/watch-fs@v$RESOLVED_VERSION
   ```
 
-  ## Changelog
-  $CHANGES
+  **Full Changelog**: https://github.com/pbouamriou/watch-fs/compare/v$PREVIOUS_TAG...v$RESOLVED_VERSION

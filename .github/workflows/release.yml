@@ -11,6 +11,8 @@ permissions:
 jobs:
   update_release_draft:
     runs-on: ubuntu-latest
+    outputs:
+      release-body: ${{ steps.release_drafter.outputs.body }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -65,6 +67,6 @@ jobs:
             dist/watch-fs-windows-arm64.exe
           draft: false
           prerelease: false
-          body_path: .github/release-drafter.yml
+          body: ${{ needs.update_release_draft.outputs.release-body }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
