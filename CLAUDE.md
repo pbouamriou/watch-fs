@@ -172,7 +172,7 @@ The folder manager (Ctrl+F) features a dual-panel interface with sophisticated f
 
 - `github.com/fsnotify/fsnotify`: File system event notifications
 - `github.com/jesseduffield/gocui`: Terminal UI framework (fork with enhanced features including `FrameColor` support)
-- `github.com/fatih/color`: Colored terminal output  
+- `github.com/fatih/color`: Colored terminal output
 - `github.com/mattn/go-sqlite3`: SQLite database driver
 
 ## Testing Strategy
@@ -182,6 +182,7 @@ The folder manager (Ctrl+F) features a dual-panel interface with sophisticated f
 The project includes comprehensive automated tests in the `test/` directory:
 
 #### Unit Tests
+
 - **Event Processing**: `ui_test.go` - Tests event aggregation, filtering, and sorting
 - **Navigation Logic**: Tests for scroll position, cursor management, and boundary conditions
 - **Folder Manager**: `folder_manager_test.go` - Tests directory navigation and selection logic
@@ -189,12 +190,14 @@ The project includes comprehensive automated tests in the `test/` directory:
 - **Integration**: `ui_integration_test.go` - Tests UI state consistency and focus transitions
 
 #### Test Helpers and Utilities
+
 - **MockWatcher**: Simulates file system watcher for controlled testing
 - **TestHelper**: Provides utilities for creating test directory structures
 - **Performance Tests**: Tests UI responsiveness with large numbers of events
 - **Concurrency Tests**: Validates thread-safe operations
 
 #### Key Testing Patterns
+
 ```go
 // Use TestHelper for directory-based tests
 helper := NewTestHelperWithTempDir(t, "test-name")
@@ -216,6 +219,7 @@ helper.AssertFocus(t, expectedFocus)
 ```
 
 #### Running Tests
+
 ```bash
 # Run all automated tests
 go test ./test/... -v
@@ -229,13 +233,16 @@ make test-coverage
 ```
 
 ### Manual Testing
+
 Interactive TUI testing scripts for user experience validation:
+
 - **Focus System Tests**: Automated focus state validation
 - **Keyboard Navigation**: `test_navigation_fix.sh`
-- **Multiple Folders**: `test_multiple_folders.sh` 
+- **Multiple Folders**: `test_multiple_folders.sh`
 - **Import/Export**: `test_import_export.sh`
 
 ### TUI Testing Best Practices
+
 1. **Mock Dependencies**: Use MockWatcher and MockView for isolated testing
 2. **Real Directories**: Use temporary directories for realistic folder navigation tests
 3. **State Validation**: Always verify UI state consistency after operations
@@ -281,6 +288,7 @@ if activePanel == FocusWatchedFolders {
 ```
 
 **Critical Implementation Details:**
+
 - Always synchronize `TitleColor` and `FrameColor` for consistent visual feedback
 - Separate selection indices: `SelectedIdx` (right panel) vs `WatchedIdx` (left panel)
 - Update focus in both layout creation AND existing view updates (two code paths)
@@ -293,11 +301,12 @@ Avoiding the common mistake of showing global totals instead of per-folder count
 // WRONG: Shows same total for all folders
 totalWatched := counter.GetWatchedCount() // Global total
 
-// CORRECT: Shows individual folder counts  
+// CORRECT: Shows individual folder counts
 rootWatched := counter.GetWatchedCountForRoot(specificRoot) // Per-folder
 ```
 
 **Implementation Pattern:**
+
 - Use `filepath.Rel()` to determine if a path belongs to a specific root
 - Avoid deprecated `filepath.HasPrefix()` - use proper relative path checking
 - Clean and normalize paths before comparison
@@ -309,8 +318,8 @@ For handling multiple identical flags (`--path` used multiple times):
 ```go
 type pathsFlag []string
 func (p *pathsFlag) String() string { return strings.Join(*p, ",") }
-func (p *pathsFlag) Set(value string) error { 
-    *p = append(*p, value); return nil 
+func (p *pathsFlag) Set(value string) error {
+    *p = append(*p, value); return nil
 }
 
 // Usage: var paths pathsFlag; flag.Var(&paths, "path", "...")
@@ -353,3 +362,29 @@ Effective patterns for testing complex UI interactions:
 ### Code Quality and Maintenance
 
 - **Always use golangci-lint to check code rules after code modification.**
+
+### Feature Tracking and Workflow
+
+- Use `NEXT-FEATURES.md` as the single source of truth to track upcoming features and their status. Update this file when starting work and mark items as done when each feature is completed.
+- Before coding a new feature, create a specification file: `features/{{short-feature-name}}.md`. This document must define the scope and tasks and will be kept up-to-date during development. It acts as the contract between the maintainer and the AI about what the feature must deliver and how.
+- Required content for `features/{{short-feature-name}}.md`:
+  - Summary and goals (with non-goals)
+  - User stories / use cases
+  - Acceptance criteria (clear, testable)
+  - Task checklist (implementation, tests, docs, TUI/help updates)
+  - Dependencies and risks
+  - Testing plan (unit/integration/manual scripts)
+  - UX/Keybindings impacts (if any)
+  - Rollout notes (flags, migration, compatibility)
+- The maintainer will review this spec to ensure alignment before implementation starts. Update the spec file as progress is made and when scope changes.
+- Before starting development on a new feature, create a feature branch following the convention: `improvement/{{feature-name}}`.
+- Open a Pull Request on GitHub targeting `main` for every feature branch. Reference the corresponding item in `NEXT-FEATURES.md` within the PR description.
+- In the PR description, also link the `features/{{short-feature-name}}.md` specification and keep the checklist in sync with the actual progress.
+- Address all PR review comments before merging. Do not merge until feedback is resolved and checks are green (tests, lint).
+- After merge, update `NEXT-FEATURES.md` to reflect the completed status and, if applicable, update `CHANGELOG.md`.
+
+### Branch Naming Conventions
+
+- `improvement/{{feature-name}}`: Feature and enhancement branches
+- `bugix/{{short-bug-description}}`: Bug fix branches
+- `workflow/{{description}}`: Workflow/process documentation updates
